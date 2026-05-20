@@ -1,45 +1,36 @@
-import { Shirt, ShoppingBag, User } from "lucide-react";
+import { Shirt } from "lucide-react";
 
 export function Header() {
   return (
-    <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/80 backdrop-blur">
+    <header className="sticky top-0 z-30 border-b border-line bg-paper/85 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-        <div className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-900 text-white">
-            <Shirt className="h-5 w-5" />
+        <a href="#top" className="flex items-center gap-2.5">
+          <div className="grid h-9 w-9 place-items-center rounded-lg bg-ink text-white">
+            <Shirt className="h-[18px] w-[18px]" />
           </div>
-          <div className="leading-tight">
-            <p className="text-sm font-bold tracking-tight">JerseyGen</p>
-            <p className="text-[10px] uppercase tracking-widest text-slate-500">
-              AI Custom Jersey
-            </p>
-          </div>
-        </div>
-        <nav className="hidden items-center gap-6 text-sm font-medium text-slate-600 md:flex">
-          <a href="#designer" className="hover:text-slate-900">
+          <span className="font-display text-lg font-extrabold uppercase tracking-tight">
+            Jersey<span className="text-accent">Gen</span>
+          </span>
+        </a>
+
+        <nav className="hidden items-center gap-8 text-sm font-medium text-ink-mute md:flex">
+          <a href="#designer" className="transition hover:text-ink">
             Designer
           </a>
-          <a href="#how" className="hover:text-slate-900">
+          <a href="#how" className="transition hover:text-ink">
             Cara Pakai
           </a>
-          <a href="#faq" className="hover:text-slate-900">
+          <a href="#faq" className="transition hover:text-ink">
             FAQ
           </a>
         </nav>
-        <div className="flex items-center gap-2">
-          <button
-            aria-label="Akun"
-            className="grid h-9 w-9 place-items-center rounded-full text-slate-600 hover:bg-slate-100"
-          >
-            <User className="h-5 w-5" />
-          </button>
-          <button
-            aria-label="Keranjang"
-            className="grid h-9 w-9 place-items-center rounded-full text-slate-600 hover:bg-slate-100"
-          >
-            <ShoppingBag className="h-5 w-5" />
-          </button>
-        </div>
+
+        <a
+          href="#designer"
+          className="rounded-xl bg-ink px-4 py-2 text-sm font-bold text-white transition hover:bg-ink/85"
+        >
+          Mulai Desain
+        </a>
       </div>
     </header>
   );

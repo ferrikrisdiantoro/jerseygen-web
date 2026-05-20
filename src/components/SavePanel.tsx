@@ -1,6 +1,5 @@
 "use client";
 
-import clsx from "clsx";
 import { BookmarkPlus, FolderOpen, Loader2, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { extractJerseyState, useJerseyStore } from "@/lib/store";
@@ -11,6 +10,7 @@ import {
   saveJersey,
 } from "@/lib/savedJerseys";
 import type { SavedJersey } from "@/types/jersey";
+import { Panel } from "./ui/Panel";
 
 export function SavePanel() {
   const store = useJerseyStore();
@@ -59,24 +59,23 @@ export function SavePanel() {
   }
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-      <p className="mb-1 text-sm font-bold text-slate-900">Simpan Jersey</p>
-      <p className="mb-3 text-xs text-slate-500">
-        Simpan desain ini atas nama tertentu, bisa dibuka lagi nanti.
-      </p>
-
+    <Panel
+      icon={<BookmarkPlus className="h-[18px] w-[18px]" />}
+      title="Simpan Jersey"
+      desc="Simpan desain ini atas nama tertentu, bisa dibuka lagi nanti."
+    >
       <div className="flex gap-2">
         <input
           value={ownerName}
           onChange={(e) => setOwnerName(e.target.value)}
           placeholder="Nama pemilik jersey…"
           maxLength={30}
-          className="flex-1 rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+          className="jg-input flex-1"
         />
         <button
           onClick={handleSave}
           disabled={saving}
-          className="flex items-center gap-1.5 rounded-lg bg-slate-900 px-3.5 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
+          className="flex items-center gap-1.5 rounded-xl bg-ink px-4 py-2.5 text-sm font-bold text-white transition hover:bg-ink/85 disabled:opacity-60"
         >
           {saving ? (
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -89,7 +88,7 @@ export function SavePanel() {
 
       <button
         onClick={() => setOpen((v) => !v)}
-        className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-sky-600 hover:underline"
+        className="mt-3 flex items-center gap-1.5 text-xs font-bold text-accent transition hover:text-accent-dark"
       >
         <FolderOpen className="h-4 w-4" />
         Jersey Tersimpan ({saved.length})
@@ -98,24 +97,22 @@ export function SavePanel() {
       {open && (
         <div className="mt-3 space-y-2">
           {saved.length === 0 && (
-            <p className="text-xs text-slate-400">Belum ada jersey tersimpan.</p>
+            <p className="text-xs text-ink-soft">Belum ada jersey tersimpan.</p>
           )}
           {saved.map((j) => (
             <div
               key={j.id}
-              className="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50/60 p-2"
+              className="flex items-center gap-3 rounded-xl border border-line bg-paper/60 p-2"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={j.thumbnail}
                 alt={j.ownerName}
-                className="h-12 w-10 rounded object-cover"
+                className="h-12 w-10 rounded-md object-cover"
               />
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-slate-900">
-                  {j.ownerName}
-                </p>
-                <p className="text-[11px] text-slate-400">
+                <p className="truncate text-sm font-bold text-ink">{j.ownerName}</p>
+                <p className="text-[11px] text-ink-soft">
                   {new Date(j.createdAt).toLocaleString("id-ID", {
                     dateStyle: "medium",
                     timeStyle: "short",
@@ -124,13 +121,13 @@ export function SavePanel() {
               </div>
               <button
                 onClick={() => handleLoad(j)}
-                className="rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+                className="rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-bold text-ink transition hover:bg-paper"
               >
                 Buka
               </button>
               <button
                 onClick={() => handleDelete(j.id)}
-                className="grid h-7 w-7 place-items-center rounded-md text-rose-600 hover:bg-rose-50"
+                className="grid h-7 w-7 place-items-center rounded-lg text-rose-600 transition hover:bg-rose-50"
                 aria-label="Hapus"
               >
                 <Trash2 className="h-3.5 w-3.5" />
@@ -141,14 +138,10 @@ export function SavePanel() {
       )}
 
       {toast && (
-        <p
-          className={clsx(
-            "mt-3 rounded-md bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700",
-          )}
-        >
+        <p className="mt-3 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700">
           {toast}
         </p>
       )}
-    </div>
+    </Panel>
   );
 }

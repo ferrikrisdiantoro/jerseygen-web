@@ -49,23 +49,22 @@ export function TextTab() {
         />
       </Field>
 
-      {/* custom text — owayo style */}
-      <div className="border-t border-slate-100 pt-4">
+      <div className="border-t border-line pt-4">
         <div className="mb-2 flex items-center justify-between">
-          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-ink-soft">
             Teks Tambahan
-          </p>
+          </span>
           <button
             onClick={addCustomText}
             disabled={customTexts.length >= 4}
-            className="flex items-center gap-1 rounded-md bg-slate-900 px-2.5 py-1 text-xs font-semibold text-white hover:bg-slate-800 disabled:opacity-40"
+            className="flex items-center gap-1 rounded-lg bg-ink px-2.5 py-1.5 text-xs font-bold text-white transition hover:bg-ink/85 disabled:opacity-40"
           >
             <Plus className="h-3.5 w-3.5" /> Tambah
           </button>
         </div>
 
         {customTexts.length === 0 && (
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-ink-soft">
             Belum ada teks tambahan. Klik “Tambah” untuk menulis teks bebas di jersey.
           </p>
         )}
@@ -74,7 +73,7 @@ export function TextTab() {
           {customTexts.map((t) => (
             <div
               key={t.id}
-              className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50/60 p-2"
+              className="flex items-center gap-2 rounded-xl border border-line bg-paper/60 p-2"
             >
               <input
                 maxLength={16}
@@ -88,7 +87,7 @@ export function TextTab() {
                 onChange={(e) =>
                   updateCustomText(t.id, { placement: e.target.value as TextPlacement })
                 }
-                className="rounded-md border border-slate-200 bg-white px-1.5 py-1.5 text-xs"
+                className="rounded-lg border border-line bg-surface px-1.5 py-1.5 text-xs font-medium outline-none focus:border-accent"
               >
                 {PLACEMENTS.map((p) => (
                   <option key={p} value={p}>
@@ -100,12 +99,12 @@ export function TextTab() {
                 type="color"
                 value={t.color}
                 onChange={(e) => updateCustomText(t.id, { color: e.target.value })}
-                className="h-8 w-8 cursor-pointer rounded border border-slate-200"
+                className="h-8 w-8 rounded-md border border-line"
                 aria-label="Warna teks"
               />
               <button
                 onClick={() => removeCustomText(t.id)}
-                className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-rose-600 hover:bg-rose-50"
+                className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-rose-600 transition hover:bg-rose-50"
                 aria-label="Hapus teks"
               >
                 <Trash2 className="h-4 w-4" />
@@ -114,23 +113,6 @@ export function TextTab() {
           ))}
         </div>
       </div>
-
-      <style jsx global>{`
-        .jg-input {
-          width: 100%;
-          border-radius: 8px;
-          border: 1px solid #e2e8f0;
-          padding: 10px 12px;
-          font-size: 14px;
-          background: white;
-          outline: none;
-          transition: border-color 120ms;
-        }
-        .jg-input:focus {
-          border-color: #0ea5e9;
-          box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.15);
-        }
-      `}</style>
     </div>
   );
 }
@@ -145,8 +127,10 @@ function Field({
   return (
     <div>
       <div className="mb-1.5 flex items-baseline justify-between">
-        <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">{label}</label>
-        {hint && <span className="text-[10px] text-slate-400">{hint}</span>}
+        <span className="text-[11px] font-bold uppercase tracking-wider text-ink-soft">
+          {label}
+        </span>
+        {hint && <span className="text-[10px] text-ink-soft">{hint}</span>}
       </div>
       {children}
     </div>

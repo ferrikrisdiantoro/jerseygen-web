@@ -2,44 +2,62 @@ import { Camera, Palette, Sparkles } from "lucide-react";
 
 const STEPS = [
   {
+    n: "01",
     icon: Palette,
-    title: "1. Desain Jersey",
-    desc: "Pilih design, warna, tambahkan nama, nomor punggung, dan logo sesuai kreasimu.",
+    title: "Desain Jersey",
+    desc: "Pilih pattern, warna, tambahkan nama, nomor punggung, logo, dan teks bebas — semua dalam 3D.",
   },
   {
+    n: "02",
     icon: Camera,
-    title: "2. Upload Foto (Opsional)",
-    desc: "Aktifkan toggle 'pakai muka sendiri' lalu upload foto kamu. Tanpa foto pun bisa.",
+    title: "Upload Foto",
+    desc: "Aktifkan toggle 'pakai muka sendiri' lalu upload fotomu. Tanpa foto pun tetap bisa.",
   },
   {
+    n: "03",
     icon: Sparkles,
-    title: "3. Generate",
-    desc: "Klik Generate, AI akan menampilkan hasil orang memakai jersey custommu.",
+    title: "Generate AI",
+    desc: "Klik Generate, AI menampilkan hasil orang memakai jersey custom buatanmu.",
   },
 ];
 
 export function HowItWorks() {
   return (
-    <section id="how" className="mx-auto max-w-6xl px-4 py-12">
-      <h2 className="mb-1 text-center text-2xl font-extrabold tracking-tight text-slate-900">
-        Cara Pakai
-      </h2>
-      <p className="mb-8 text-center text-sm text-slate-600">
-        Tiga langkah, kurang dari satu menit.
-      </p>
-      <div className="grid gap-4 sm:grid-cols-3">
-        {STEPS.map((s) => (
-          <div
-            key={s.title}
-            className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
-          >
-            <div className="grid h-10 w-10 place-items-center rounded-lg bg-sky-50 text-sky-600">
-              <s.icon className="h-5 w-5" />
+    <section id="how" className="scroll-mt-20 border-t border-line bg-surface">
+      <div className="mx-auto max-w-6xl px-4 py-16">
+        <div className="flex flex-col items-center text-center">
+          <span className="text-xs font-bold uppercase tracking-[0.2em] text-accent">
+            Cara Pakai
+          </span>
+          <h2 className="mt-2 font-display text-3xl font-extrabold uppercase tracking-tight text-ink sm:text-4xl">
+            Tiga Langkah Saja
+          </h2>
+          <p className="mt-2 text-sm text-ink-mute">
+            Dari desain kosong sampai hasil AI — kurang dari satu menit.
+          </p>
+        </div>
+
+        <div className="mt-10 grid gap-4 sm:grid-cols-3">
+          {STEPS.map((s) => (
+            <div
+              key={s.n}
+              className="group relative overflow-hidden rounded-2xl border border-line bg-paper/50 p-6 transition hover:border-accent/50"
+            >
+              <span className="absolute -right-2 -top-3 font-display text-7xl font-extrabold text-line">
+                {s.n}
+              </span>
+              <div className="relative">
+                <div className="grid h-11 w-11 place-items-center rounded-xl bg-ink text-white transition group-hover:bg-accent">
+                  <s.icon className="h-5 w-5" />
+                </div>
+                <p className="mt-4 font-display text-lg font-extrabold uppercase tracking-tight text-ink">
+                  {s.title}
+                </p>
+                <p className="mt-1.5 text-sm text-ink-mute">{s.desc}</p>
+              </div>
             </div>
-            <p className="mt-3 font-bold text-slate-900">{s.title}</p>
-            <p className="mt-1 text-sm text-slate-600">{s.desc}</p>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </section>
   );

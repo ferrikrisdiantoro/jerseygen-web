@@ -1,9 +1,10 @@
 "use client";
 
-import { Download, Loader2, Printer } from "lucide-react";
+import { Download, FileImage, Loader2, Printer } from "lucide-react";
 import { useState } from "react";
 import { extractJerseyState, useJerseyStore } from "@/lib/store";
 import { buildDesignSheet } from "@/lib/jerseyTexture";
+import { Panel } from "./ui/Panel";
 
 export function ExportBar() {
   const store = useJerseyStore();
@@ -51,16 +52,16 @@ export function ExportBar() {
   }
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-      <p className="mb-1 text-sm font-bold text-slate-900">Ekspor Desain</p>
-      <p className="mb-3 text-xs text-slate-500">
-        Unduh atau cetak lembar desain jersey (tampak depan &amp; belakang).
-      </p>
+    <Panel
+      icon={<FileImage className="h-[18px] w-[18px]" />}
+      title="Ekspor Desain"
+      desc="Unduh atau cetak lembar desain (tampak depan & belakang)."
+    >
       <div className="grid grid-cols-2 gap-2">
         <button
           onClick={handleDownload}
           disabled={busy !== null}
-          className="flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+          className="flex items-center justify-center gap-2 rounded-xl border border-line bg-surface px-4 py-2.5 text-sm font-bold text-ink transition hover:border-line-strong hover:bg-paper disabled:opacity-60"
         >
           {busy === "download" ? (
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -72,7 +73,7 @@ export function ExportBar() {
         <button
           onClick={handlePrint}
           disabled={busy !== null}
-          className="flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+          className="flex items-center justify-center gap-2 rounded-xl border border-line bg-surface px-4 py-2.5 text-sm font-bold text-ink transition hover:border-line-strong hover:bg-paper disabled:opacity-60"
         >
           {busy === "print" ? (
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -82,6 +83,6 @@ export function ExportBar() {
           Print Design
         </button>
       </div>
-    </div>
+    </Panel>
   );
 }

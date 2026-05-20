@@ -1,6 +1,6 @@
 "use client";
 
-import { Download, X } from "lucide-react";
+import { Download, RotateCcw, X } from "lucide-react";
 
 export function ResultModal({
   imageUrl,
@@ -25,34 +25,39 @@ export function ResultModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4 backdrop-blur-sm">
-      <div className="relative w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl">
+    <div className="fixed inset-0 z-50 grid place-items-center bg-ink/60 p-4 backdrop-blur-sm">
+      <div className="relative w-full max-w-md overflow-hidden rounded-2xl border border-line bg-surface shadow-pop">
         <button
           onClick={onClose}
-          className="absolute right-3 top-3 z-10 grid h-9 w-9 place-items-center rounded-full bg-white/90 text-slate-700 shadow hover:bg-white"
+          className="absolute right-3 top-3 z-10 grid h-9 w-9 place-items-center rounded-full bg-surface/95 text-ink shadow-card transition hover:bg-surface"
           aria-label="Tutup"
         >
           <X className="h-5 w-5" />
         </button>
-        <div className="aspect-[3/4] w-full bg-slate-100">
+        <div className="aspect-[3/4] w-full bg-paper">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={imageUrl} alt="Hasil generate" className="h-full w-full object-cover" />
         </div>
         <div className="space-y-3 p-5">
-          <h3 className="text-lg font-bold text-slate-900">Hasil Generate Kamu</h3>
-          <p className="text-sm text-slate-600">
-            Belum sesuai? Klik tombol generate lagi untuk hasil baru, atau ubah desain dulu.
+          <span className="inline-flex rounded-full bg-accent-soft px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-accent">
+            Hasil AI
+          </span>
+          <h3 className="font-display text-xl font-extrabold uppercase tracking-tight text-ink">
+            Jersey Kamu Sudah Jadi
+          </h3>
+          <p className="text-sm text-ink-mute">
+            Belum sesuai? Generate lagi untuk hasil baru, atau ubah desainnya dulu.
           </p>
           <div className="flex gap-2">
             <button
               onClick={onClose}
-              className="flex-1 rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-line bg-surface px-4 py-2.5 text-sm font-bold text-ink transition hover:bg-paper"
             >
-              Generate Lagi
+              <RotateCcw className="h-4 w-4" /> Generate Lagi
             </button>
             <button
               onClick={handleDownload}
-              className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800"
+              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-accent px-4 py-2.5 text-sm font-bold text-white transition hover:bg-accent-dark"
             >
               <Download className="h-4 w-4" /> Download
             </button>

@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2, Sparkles } from "lucide-react";
+import { Loader2, Sparkles, Wand2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { extractJerseyState, useJerseyStore } from "@/lib/store";
 import { exportFrontPng } from "@/lib/jerseyTexture";
@@ -13,6 +13,7 @@ import {
   setEmail,
 } from "@/lib/quota";
 import { ResultModal } from "./ResultModal";
+import { Panel } from "./ui/Panel";
 
 export function GenerateBar() {
   const store = useJerseyStore();
@@ -95,27 +96,33 @@ export function GenerateBar() {
 
   return (
     <>
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-        <div className="mb-3 flex items-center justify-between text-xs">
-          <span className="font-semibold text-slate-700">
-            Kuota generate gratis: {remaining} / {quota}
+      <Panel
+        icon={<Wand2 className="h-[18px] w-[18px]" />}
+        title="Generate dengan AI"
+        desc="Lihat hasil orang memakai jersey custom buatanmu."
+        tone="accent"
+      >
+        <div className="mb-3 flex items-center justify-between rounded-xl bg-paper/70 px-3 py-2.5 text-xs">
+          <span className="font-bold text-ink">
+            Kuota gratis:{" "}
+            <span className="text-accent">{remaining}</span> / {quota}
           </span>
           {email ? (
             <button
               onClick={switchAccount}
-              className="font-medium text-sky-600 hover:underline"
+              className="font-bold text-accent transition hover:text-accent-dark"
             >
               Ganti akun
             </button>
           ) : (
-            <span className="text-slate-400">Login email untuk mulai</span>
+            <span className="text-ink-soft">Login email untuk mulai</span>
           )}
         </div>
 
         <button
           onClick={handleGenerate}
           disabled={busy}
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 px-5 py-3.5 text-sm font-bold text-white shadow-lg shadow-sky-500/30 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-70"
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-accent px-5 py-4 text-sm font-bold uppercase tracking-wide text-white shadow-card transition hover:bg-accent-dark disabled:cursor-not-allowed disabled:opacity-70"
         >
           {busy ? (
             <>
@@ -125,26 +132,28 @@ export function GenerateBar() {
           ) : (
             <>
               <Sparkles className="h-5 w-5" />
-              Generate dengan AI
+              Generate Sekarang
             </>
           )}
         </button>
 
         {error && (
-          <p className="mt-3 rounded-md bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700">
+          <p className="mt-3 rounded-lg bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
             {error}
           </p>
         )}
-      </div>
+      </Panel>
 
       {emailModalOpen && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4">
+        <div className="fixed inset-0 z-50 grid place-items-center bg-ink/50 p-4 backdrop-blur-sm">
           <form
             onSubmit={submitEmail}
-            className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-xl"
+            className="w-full max-w-sm rounded-2xl border border-line bg-surface p-6 shadow-pop"
           >
-            <h3 className="text-lg font-bold text-slate-900">Mulai Generate</h3>
-            <p className="mt-1 text-sm text-slate-600">
+            <h3 className="font-display text-xl font-extrabold uppercase tracking-tight text-ink">
+              Mulai Generate
+            </h3>
+            <p className="mt-1 text-sm text-ink-mute">
               Masukkan email untuk klaim kuota gratis kamu.
             </p>
             <input
@@ -154,19 +163,19 @@ export function GenerateBar() {
               value={emailInput}
               onChange={(e) => setEmailInput(e.target.value)}
               placeholder="kamu@email.com"
-              className="mt-4 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+              className="jg-input mt-4"
             />
             <div className="mt-4 flex gap-2">
               <button
                 type="button"
                 onClick={() => setEmailModalOpen(false)}
-                className="flex-1 rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                className="flex-1 rounded-xl border border-line bg-surface px-4 py-2.5 text-sm font-bold text-ink transition hover:bg-paper"
               >
                 Batal
               </button>
               <button
                 type="submit"
-                className="flex-1 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800"
+                className="flex-1 rounded-xl bg-accent px-4 py-2.5 text-sm font-bold text-white transition hover:bg-accent-dark"
               >
                 Lanjut
               </button>

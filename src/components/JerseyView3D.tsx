@@ -132,7 +132,7 @@ export default function JerseyView3D({
       dpr={[1, 2]}
       shadows
     >
-      <color attach="background" args={["#eef2f7"]} />
+      <color attach="background" args={["#ecebe7"]} />
       <ambientLight intensity={0.9} />
       <directionalLight position={[3, 5, 5]} intensity={1.15} castShadow />
       <directionalLight position={[-4, 2, -3]} intensity={0.45} />
