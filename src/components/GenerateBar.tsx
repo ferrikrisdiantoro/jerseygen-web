@@ -153,11 +153,12 @@ export function GenerateBar() {
       </Panel>
 
       {emailModalOpen && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-ink/50 p-4 backdrop-blur-sm">
-          <form
-            onSubmit={submitEmail}
-            className="w-full max-w-sm rounded-2xl border border-line bg-surface p-6 shadow-pop"
-          >
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-ink/50 backdrop-blur-sm">
+          <div className="flex min-h-full items-center justify-center p-4">
+            <form
+              onSubmit={submitEmail}
+              className="my-auto w-full max-w-sm rounded-2xl border border-line bg-surface p-6 shadow-pop"
+            >
             <h3 className="font-display text-xl font-extrabold uppercase tracking-tight text-ink">
               Mulai Generate
             </h3>
@@ -188,7 +189,8 @@ export function GenerateBar() {
                 Lanjut
               </button>
             </div>
-          </form>
+            </form>
+          </div>
         </div>
       )}
 

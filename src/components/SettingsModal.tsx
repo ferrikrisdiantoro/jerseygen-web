@@ -54,9 +54,10 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-ink/55 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-md overflow-hidden rounded-2xl border border-line bg-surface shadow-pop">
-        <div className="flex items-center justify-between border-b border-line px-5 py-4">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-ink/55 backdrop-blur-sm">
+      <div className="flex min-h-full items-center justify-center p-4">
+        <div className="my-auto w-full max-w-md overflow-hidden rounded-2xl border border-line bg-surface shadow-pop">
+          <div className="flex items-center justify-between border-b border-line px-5 py-4">
           <div className="flex items-center gap-2">
             <div className="grid h-8 w-8 place-items-center rounded-lg bg-ink text-white">
               <KeyRound className="h-4 w-4" />
@@ -176,6 +177,7 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
           >
             {savedNote ? "Tersimpan ✓" : "Simpan Setelan"}
           </button>
+          </div>
         </div>
       </div>
     </div>

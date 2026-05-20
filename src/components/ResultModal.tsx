@@ -25,8 +25,9 @@ export function ResultModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-ink/60 p-4 backdrop-blur-sm">
-      <div className="relative w-full max-w-md overflow-hidden rounded-2xl border border-line bg-surface shadow-pop">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-ink/60 backdrop-blur-sm">
+      <div className="flex min-h-full items-center justify-center p-4">
+        <div className="relative my-auto w-full max-w-md overflow-hidden rounded-2xl border border-line bg-surface shadow-pop">
         <button
           onClick={onClose}
           className="absolute right-3 top-3 z-10 grid h-9 w-9 place-items-center rounded-full bg-surface/95 text-ink shadow-card transition hover:bg-surface"
@@ -62,6 +63,7 @@ export function ResultModal({
               <Download className="h-4 w-4" /> Download
             </button>
           </div>
+        </div>
         </div>
       </div>
     </div>
