@@ -9,6 +9,10 @@ export const maxDuration = 120;
 interface Body {
   jersey: JerseyState;
   jerseyPreviewDataUrl: string;
+  // optional overrides from the Settings UI
+  provider?: string;
+  apiKey?: string;
+  model?: string;
 }
 
 export async function POST(req: Request) {
@@ -30,13 +34,20 @@ export async function POST(req: Request) {
   }
 
   try {
-    const provider = getProvider();
+    // provider & key: request override > env default
+    const providerName = body.provider || process.env.AI_PROVIDER || "mock";
+    const provider = getProvider(providerName);
     const prompt = buildJerseyPrompt(body.jersey);
-    const result = await provider.generate({
-      prompt,
-      jerseyImageDataUrl: body.jerseyPreviewDataUrl,
-      userPhotoDataUrl: body.jersey.useFace ? body.jersey.userPhotoDataUrl : null,
-    });
+
+    const result = await provider.generate(
+      {
+        prompt,
+        jerseyImageDataUrl: body.jerseyPreviewDataUrl,
+        userPhotoDataUrl: body.jersey.useFace ? body.jersey.userPhotoDataUrl : null,
+      },
+      { apiKey: body.apiKey, model: body.model },
+    );
+
     return NextResponse.json({ imageUrl: result.imageUrl, provider: provider.name });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Internal error";

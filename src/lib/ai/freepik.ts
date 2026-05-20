@@ -1,45 +1,89 @@
-import type { AIProvider, GenerateInput } from "./types";
+import type { AIProvider, GenerateInput, ProviderOptions } from "./types";
 
-// Freepik AI — Mystic / Imagen style. Adjust endpoint per Freepik's current docs.
-// Reference: https://docs.freepik.com/api-reference
+// Freepik / Magnific AI — image edit with reference images.
+// Docs: https://docs.freepik.com  (now hosted at docs.magnific.com)
 //
-// This is a skeleton — confirm exact request/response shape on Freepik dashboard
-// before going live. Default to KieAI provider unless Freepik is preferred.
+// Verified models (async task pattern: create -> poll):
+//  - "seedream-v4-5-edit"  : edit pakai 1-5 reference image + prompt (DEFAULT, terverifikasi)
+//  - "nano-banana-pro"     : Google Gemini, paling jago "orang + baju -> orang pakai baju"
+//  - "nano-banana"         : versi standar nano banana
+//
+// Flow:
+//  1) POST {BASE}/v1/ai/text-to-image/{model}  -> { data: { task_id, status, generated } }
+//  2) Poll GET {BASE}/v1/ai/text-to-image/{model}/{task_id} sampai status COMPLETED
+//  3) Ambil URL gambar dari data.generated[0]
 
-const BASE_URL = "https://api.freepik.com";
+const POLL_INTERVAL_MS = 3000;
+const MAX_POLL_MS = 120_000;
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+interface FreepikTask {
+  data?: {
+    task_id?: string;
+    status?: string;
+    generated?: string[];
+  };
+}
 
 export const freepikProvider: AIProvider = {
   name: "freepik",
-  async generate({ prompt, jerseyImageDataUrl, userPhotoDataUrl }: GenerateInput) {
-    const apiKey = process.env.FREEPIK_API_KEY;
-    if (!apiKey) throw new Error("FREEPIK_API_KEY belum diisi di environment");
+  async generate(
+    { prompt, jerseyImageDataUrl, userPhotoDataUrl }: GenerateInput,
+    opts: ProviderOptions,
+  ) {
+    const apiKey = opts.apiKey || process.env.FREEPIK_API_KEY;
+    if (!apiKey) throw new Error("API key Freepik belum diisi");
+
+    const base = process.env.FREEPIK_BASE_URL || "https://api.freepik.com";
+    const model = opts.model || process.env.FREEPIK_MODEL || "seedream-v4-5-edit";
+    const endpoint = `${base}/v1/ai/text-to-image/${model}`;
 
     const refs = [jerseyImageDataUrl];
     if (userPhotoDataUrl) refs.push(userPhotoDataUrl);
 
-    const res = await fetch(`${BASE_URL}/v1/ai/text-to-image`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-freepik-api-key": apiKey,
-      },
-      body: JSON.stringify({
-        prompt,
-        reference_images: refs,
-        num_images: 1,
-        styling: { style: "photo" },
-      }),
-    });
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(`Freepik gagal: ${res.status} ${text}`);
-    }
-    const json = (await res.json()) as {
-      data?: Array<{ base64?: string; url?: string }>;
+    // Freepik & Magnific keys — kirim dua-duanya supaya kompatibel kedua host.
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      "x-freepik-api-key": apiKey,
+      "x-magnific-api-key": apiKey,
     };
-    const first = json.data?.[0];
-    const imageUrl = first?.url || (first?.base64 ? `data:image/png;base64,${first.base64}` : "");
-    if (!imageUrl) throw new Error("Freepik tidak mengembalikan gambar");
-    return { imageUrl };
+
+    // nano-banana memakai field "image_urls", seedream memakai "reference_images".
+    const isNanoBanana = model.includes("nano-banana");
+    const body = isNanoBanana
+      ? { prompt, image_urls: refs }
+      : { prompt, reference_images: refs };
+
+    const createRes = await fetch(endpoint, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(body),
+    });
+    if (!createRes.ok) {
+      const t = await createRes.text();
+      throw new Error(`Freepik create gagal: ${createRes.status} ${t}`);
+    }
+
+    const created = (await createRes.json()) as FreepikTask;
+    if (created.data?.generated?.length) {
+      return { imageUrl: created.data.generated[0] };
+    }
+    const taskId = created.data?.task_id;
+    if (!taskId) throw new Error("Freepik tidak mengembalikan task_id");
+
+    const start = Date.now();
+    while (Date.now() - start < MAX_POLL_MS) {
+      await sleep(POLL_INTERVAL_MS);
+      const pollRes = await fetch(`${endpoint}/${taskId}`, { headers });
+      if (!pollRes.ok) continue;
+      const poll = (await pollRes.json()) as FreepikTask;
+      const status = poll.data?.status;
+      if (status === "COMPLETED" && poll.data?.generated?.length) {
+        return { imageUrl: poll.data.generated[0] };
+      }
+      if (status === "FAILED") throw new Error("Freepik generate gagal (FAILED)");
+    }
+    throw new Error("Timeout menunggu hasil Freepik");
   },
 };

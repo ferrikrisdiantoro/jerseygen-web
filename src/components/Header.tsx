@@ -1,4 +1,5 @@
 import { Shirt } from "lucide-react";
+import { SettingsButton } from "./SettingsButton";
 
 export function Header() {
   return (
@@ -25,12 +26,15 @@ export function Header() {
           </a>
         </nav>
 
-        <a
-          href="#designer"
-          className="rounded-xl bg-ink px-4 py-2 text-sm font-bold text-white transition hover:bg-ink/85"
-        >
-          Mulai Desain
-        </a>
+        <div className="flex items-center gap-1.5">
+          <SettingsButton />
+          <a
+            href="#designer"
+            className="rounded-xl bg-ink px-4 py-2 text-sm font-bold text-white transition hover:bg-ink/85"
+          >
+            Mulai Desain
+          </a>
+        </div>
       </div>
     </header>
   );

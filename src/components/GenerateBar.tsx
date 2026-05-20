@@ -4,6 +4,7 @@ import { Loader2, Sparkles, Wand2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { extractJerseyState, useJerseyStore } from "@/lib/store";
 import { exportFrontPng } from "@/lib/jerseyTexture";
+import { getSettings } from "@/lib/settings";
 import {
   clearEmail,
   getEmail,
@@ -54,10 +55,17 @@ export function GenerateBar() {
       setBusy(true);
       const jersey = extractJerseyState(store);
       const previewDataUrl = await exportFrontPng(jersey);
+      const settings = getSettings();
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jersey, jerseyPreviewDataUrl: previewDataUrl }),
+        body: JSON.stringify({
+          jersey,
+          jerseyPreviewDataUrl: previewDataUrl,
+          provider: settings.provider || undefined,
+          apiKey: settings.apiKey || undefined,
+          model: settings.model || undefined,
+        }),
       });
 
       const json = (await res.json()) as { imageUrl?: string; error?: string };

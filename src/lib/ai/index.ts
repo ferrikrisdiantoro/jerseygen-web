@@ -3,9 +3,9 @@ import { mockProvider } from "./mock";
 import { kieaiProvider } from "./kieai";
 import { freepikProvider } from "./freepik";
 
-export function getProvider(): AIProvider {
-  const name = (process.env.AI_PROVIDER || "mock").toLowerCase();
-  switch (name) {
+/** Resolve a provider by name. Falls back to mock for unknown names. */
+export function getProvider(name?: string): AIProvider {
+  switch ((name || "mock").toLowerCase()) {
     case "kieai":
       return kieaiProvider;
     case "freepik":
@@ -16,4 +16,4 @@ export function getProvider(): AIProvider {
   }
 }
 
-export type { AIProvider, GenerateInput } from "./types";
+export type { AIProvider, GenerateInput, ProviderOptions } from "./types";

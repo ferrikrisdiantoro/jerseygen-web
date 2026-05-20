@@ -32,18 +32,36 @@ Buka http://localhost:3000
 
 ## Konfigurasi AI Provider
 
-Edit `.env.local`:
+Provider & API key bisa diisi **dua cara**:
+
+1. **Env var** (`.env.local` / Environment Variables di Vercel) — berlaku untuk
+   semua pengunjung situs. Ini yang utama untuk produksi.
+2. **Tombol Setelan** (ikon gerigi di header web) — key disimpan di browser itu
+   saja (localStorage), berguna untuk testing / ganti key cepat tanpa redeploy.
+
+Env var yang tersedia:
 
 | Variable | Default | Catatan |
 |---|---|---|
-| `AI_PROVIDER` | `kieai` | `kieai` \| `freepik` \| `mock` |
-| `KIEAI_API_KEY` | — | Dapat dari https://kie.ai/api-key |
-| `KIEAI_MODEL` | `google/nano-banana-edit` | Model image-edit |
-| `FREEPIK_API_KEY` | — | Optional, jika pakai Freepik |
-| `NEXT_PUBLIC_FREE_QUOTA` | `5` | Jumlah generate gratis per akun |
+| `AI_PROVIDER` | `freepik` | `freepik` \| `kieai` \| `mock` |
+| `FREEPIK_API_KEY` | — | Dari https://www.freepik.com/api |
+| `FREEPIK_MODEL` | `seedream-v4-5-edit` | `seedream-v4-5-edit` / `nano-banana-pro` / `nano-banana` |
+| `FREEPIK_BASE_URL` | `https://api.freepik.com` | Ganti ke `https://api.magnific.com` bila perlu |
+| `KIEAI_API_KEY` | — | Alternatif, dari https://kie.ai |
+| `KIEAI_MODEL` | `google/nano-banana-edit` | Model image-edit KieAI |
+| `NEXT_PUBLIC_FREE_QUOTA` | `5` | Jumlah generate gratis per browser |
 
-**Tip hemat biaya AI**: KieAI memberi free credit untuk akun baru. Jika kuota habis,
-daftar akun baru → ganti API key. Mode `mock` tidak memanggil API (untuk test UI).
+### Rekomendasi model (Freepik)
+
+- **`seedream-v4-5-edit`** — default, terverifikasi. Edit pakai 1–5 reference
+  image + prompt. Cocok untuk menempelkan jersey ke orang.
+- **`nano-banana-pro`** — Google Gemini, paling jago "orang + baju → orang
+  memakai baju" dan menjaga kemiripan wajah. Alternatif terbaik kalau hasil
+  Seedream kurang pas.
+
+**Tip hemat biaya**: provider memberi free credit untuk akun baru. Jika kuota
+habis, daftar akun baru → ganti API key (lewat env var atau tombol Setelan).
+Mode `mock` tidak memanggil API sama sekali (untuk test UI).
 
 ## Deploy ke Vercel
 
