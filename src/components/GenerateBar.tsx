@@ -1,9 +1,9 @@
 "use client";
 
 import { Loader2, Sparkles } from "lucide-react";
-import { useEffect, useState, type RefObject } from "react";
-import { useJerseyStore } from "@/lib/store";
-import { svgElementToPngDataUrl } from "@/lib/svgToPng";
+import { useEffect, useState } from "react";
+import { extractJerseyState, useJerseyStore } from "@/lib/store";
+import { exportFrontPng } from "@/lib/jerseyTexture";
 import {
   clearEmail,
   getEmail,
@@ -14,8 +14,8 @@ import {
 } from "@/lib/quota";
 import { ResultModal } from "./ResultModal";
 
-export function GenerateBar({ svgRef }: { svgRef: RefObject<SVGSVGElement> }) {
-  const jersey = useJerseyStore();
+export function GenerateBar() {
+  const store = useJerseyStore();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<string | null>(null);
@@ -44,37 +44,19 @@ export function GenerateBar({ svgRef }: { svgRef: RefObject<SVGSVGElement> }) {
       setError("Kuota gratis sudah habis. Login dengan akun lain untuk lanjut generate.");
       return;
     }
-    if (jersey.useFace && !jersey.userPhotoDataUrl) {
+    if (store.useFace && !store.userPhotoDataUrl) {
       setError("Toggle 'pakai muka sendiri' aktif — silakan upload foto kamu dulu.");
-      return;
-    }
-    if (!svgRef.current) {
-      setError("Preview belum siap, coba lagi sebentar.");
       return;
     }
 
     try {
       setBusy(true);
-      const previewDataUrl = await svgElementToPngDataUrl(svgRef.current, 800);
+      const jersey = extractJerseyState(store);
+      const previewDataUrl = await exportFrontPng(jersey);
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          jersey: {
-            design: jersey.design,
-            primaryColor: jersey.primaryColor,
-            secondaryColor: jersey.secondaryColor,
-            accentColor: jersey.accentColor,
-            playerName: jersey.playerName,
-            playerNumber: jersey.playerNumber,
-            sponsorText: jersey.sponsorText,
-            logoDataUrl: jersey.logoDataUrl,
-            size: jersey.size,
-            useFace: jersey.useFace,
-            userPhotoDataUrl: jersey.userPhotoDataUrl,
-          },
-          jerseyPreviewDataUrl: previewDataUrl,
-        }),
+        body: JSON.stringify({ jersey, jerseyPreviewDataUrl: previewDataUrl }),
       });
 
       const json = (await res.json()) as { imageUrl?: string; error?: string };

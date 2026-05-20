@@ -10,15 +10,16 @@ const PALETTE = [
 
 export function ColoursTab() {
   const {
-    primaryColor, secondaryColor, accentColor,
-    setPrimary, setSecondary, setAccent,
+    primaryColor, secondaryColor, accentColor, patternColor,
+    setPrimary, setSecondary, setAccent, setPatternColor,
   } = useJerseyStore();
 
   return (
     <div className="space-y-5">
       <ColorRow label="Warna Utama" value={primaryColor} onChange={setPrimary} />
-      <ColorRow label="Warna Sekunder" value={secondaryColor} onChange={setSecondary} />
+      <ColorRow label="Warna Sekunder (lengan)" value={secondaryColor} onChange={setSecondary} />
       <ColorRow label="Warna Aksen / Strip" value={accentColor} onChange={setAccent} />
+      <ColorRow label="Warna Pattern" value={patternColor} onChange={setPatternColor} />
     </div>
   );
 }
@@ -49,7 +50,7 @@ function ColorRow({
           <button
             key={c}
             onClick={() => onChange(c)}
-            className="aspect-square rounded-md border border-slate-200 ring-offset-1 transition hover:scale-110"
+            className="aspect-square rounded-md border border-slate-200 transition hover:scale-110"
             style={{ background: c, boxShadow: value === c ? "0 0 0 2px #0ea5e9" : undefined }}
             aria-label={`Pilih warna ${c}`}
           />

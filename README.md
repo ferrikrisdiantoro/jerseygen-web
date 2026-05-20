@@ -1,17 +1,20 @@
 # JerseyGen — Web Custom Jersey AI
 
-Landing page Next.js untuk custom jersey futsal/bola dengan AI generate. User dapat:
+Landing page Next.js untuk custom jersey futsal/bola dengan **preview 3D** dan AI generate. User dapat:
 
-1. Mendesain jersey (design, warna, nama, nomor, logo, sponsor)
-2. Upload foto wajah (opsional, toggle on/off)
-3. Pilih size fit (Oversize / Regular / Press Body)
-4. Generate hasil orang memakai jersey custom via AI
+1. Mendesain jersey 3D (pattern, warna, teks, logo) — preview bisa diputar 360°
+2. Upload pattern/template sendiri + ubah warnanya
+3. Tambah teks bebas di depan/belakang jersey (gaya owayo)
+4. Simpan jersey atas nama tertentu, buka lagi kapan saja
+5. Unduh / cetak lembar desain (tampak depan & belakang)
+6. Upload foto wajah (opsional) → AI generate orang memakai jersey custom
 
 ## Stack
 
 - Next.js 14 (App Router) + TypeScript
 - Tailwind CSS
 - Zustand (state management)
+- **Three.js + react-three-fiber + drei** (preview 3D)
 - Lucide icons
 - AI provider: KieAI (default) / Freepik / Mock
 
@@ -39,63 +42,72 @@ Edit `.env.local`:
 | `FREEPIK_API_KEY` | — | Optional, jika pakai Freepik |
 | `NEXT_PUBLIC_FREE_QUOTA` | `5` | Jumlah generate gratis per akun |
 
-**Tip hemat biaya AI**: KieAI memberi free credit untuk akun baru. Jika kuota habis, daftar akun baru → ganti API key. Mock mode (`AI_PROVIDER=mock`) tidak memanggil API sama sekali (untuk test UI).
+**Tip hemat biaya AI**: KieAI memberi free credit untuk akun baru. Jika kuota habis,
+daftar akun baru → ganti API key. Mode `mock` tidak memanggil API (untuk test UI).
 
 ## Deploy ke Vercel
 
-1. Push repo ini ke GitHub
+1. Push folder `web/` ini sebagai root repo ke GitHub
 2. Import ke https://vercel.com/new
-3. Set Environment Variables (sama seperti `.env.local`) di project settings
+3. Set Environment Variables (sama seperti `.env.local`)
 4. Deploy
-
-Hosting Vercel free tier sudah cukup untuk traffic awal.
 
 ## Struktur
 
 ```
 src/
 ├── app/
-│   ├── layout.tsx
 │   ├── page.tsx                    # landing page
-│   ├── globals.css
 │   └── api/generate/route.ts       # endpoint AI generate
 ├── components/
-│   ├── Header.tsx, Hero.tsx, Footer.tsx
-│   ├── HowItWorks.tsx, Faq.tsx
-│   ├── JerseyDesigner.tsx          # main designer (preview + tabs)
-│   ├── JerseyPreview.tsx           # SVG preview live
-│   ├── PhotoUploadSection.tsx      # toggle face + upload + size
-│   ├── GenerateBar.tsx             # tombol generate + quota + email gate
-│   ├── ResultModal.tsx             # tampil hasil + download
+│   ├── JerseyDesigner.tsx          # layout: preview 3D + tab editor
+│   ├── JerseyView3D.tsx            # viewer 3D (three / react-three-fiber)
+│   ├── PhotoUploadSection.tsx      # toggle muka sendiri + size
+│   ├── SavePanel.tsx               # simpan jersey atas nama + daftar tersimpan
+│   ├── ExportBar.tsx               # download PNG + print design
+│   ├── GenerateBar.tsx             # tombol generate + kuota + email gate
+│   ├── ResultModal.tsx             # hasil AI + download
 │   └── designer/
-│       ├── DesignTab.tsx
-│       ├── ColoursTab.tsx
-│       ├── TextTab.tsx
-│       └── LogosTab.tsx
+│       ├── PatternTab.tsx          # preset pattern + upload pattern + scale
+│       ├── ColoursTab.tsx          # warna utama/sekunder/aksen/pattern
+│       ├── TextTab.tsx             # nama, nomor, sponsor, teks bebas
+│       └── LogosTab.tsx            # upload logo
 ├── lib/
 │   ├── store.ts                    # Zustand store
-│   ├── prompt.ts                   # build AI prompt dari state jersey
-│   ├── quota.ts                    # localStorage quota tracking
-│   ├── svgToPng.ts                 # SVG → PNG dataURL
-│   └── ai/
-│       ├── index.ts                # provider router
-│       ├── types.ts
-│       ├── kieai.ts
-│       ├── freepik.ts
-│       └── mock.ts
+│   ├── jerseyTexture.ts            # composit kanvas desain (warna+pattern+teks+logo)
+│   ├── savedJerseys.ts             # CRUD jersey tersimpan (localStorage)
+│   ├── prompt.ts                   # build prompt AI
+│   ├── quota.ts                    # quota tracking (localStorage)
+│   └── ai/                         # provider AI (kieai / freepik / mock)
 └── types/jersey.ts
 ```
 
+## Cara Kerja Preview 3D
+
+- Desain digambar ke kanvas 2D (`jerseyTexture.ts`) — warna dasar, pattern,
+  sponsor, nomor, nama, logo, teks bebas.
+- Kanvas itu dipakai sebagai **texture** pada model jersey 3D procedural
+  (dua panel melengkung depan + belakang) di `JerseyView3D.tsx`.
+- Update real-time saat user mengubah desain. Bisa diputar (drag) & zoom (scroll).
+
+## Pattern
+
+- **Preset**: polos, garis vertikal/horizontal, dua sisi, selempang, chevron, kotak.
+- **Upload sendiri**: user bisa upload gambar pattern/template (PNG/JPG/SVG),
+  otomatis di-tile ke jersey. Ada opsi "warnai ulang" untuk recolor pattern.
+- Warna pattern, ukuran, dan transparansi bisa diatur.
+
 ## Catatan Teknis
 
-- **Quota** di-track via `localStorage` (per browser). Simple by design — sesuai requirement "ganti akun bisa lanjut generate".
-- **Email gate**: hanya validasi format email, tidak ada autentikasi. Untuk auth real, bisa tambahkan Supabase/Clerk di iterasi berikutnya.
-- **SVG Jersey Preview**: rendering pakai SVG primitif (5 design template). Bisa diganti dengan asset PNG/3D viewer kalau klien minta visual lebih realistis.
-- **AI Provider**: KieAI pakai async pattern (createTask → poll). Freepik skeleton — verify endpoint sebelum dipakai live.
+- **Quota & email gate**: localStorage based (per browser), tanpa auth real.
+- **Saved jerseys**: disimpan di localStorage (maks 20 desain terakhir per browser).
+- **3D**: model procedural (bukan file .glb) — ringan & tanpa aset eksternal.
+- Untuk hasil 3D foto-realistis penuh, bisa upgrade ke model `.glb` di iterasi lanjut.
 
 ## Roadmap Lanjutan (Opsional)
 
-- Auth real (Supabase/Clerk)
-- Simpan riwayat generate
-- 3D jersey viewer (Three.js)
-- Checkout / order langsung jersey hasil custom
+- Auth real (Supabase/Clerk) + simpan jersey ke cloud
+- Model jersey 3D realistis (.glb)
+- Library pattern bawaan yang lebih banyak
+- Checkout / order jersey hasil custom
+```

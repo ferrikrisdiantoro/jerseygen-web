@@ -1,7 +1,7 @@
-import { DESIGN_LABELS, type JerseyState } from "@/types/jersey";
+import { PATTERN_LABELS, type JerseyState } from "@/types/jersey";
 
 export function buildJerseyPrompt(jersey: JerseyState): string {
-  const designName = DESIGN_LABELS[jersey.design];
+  const patternName = PATTERN_LABELS[jersey.patternType];
   const fitDescription =
     jersey.size === "oversize"
       ? "loose oversize fit, baggy silhouette around the torso"
@@ -14,8 +14,8 @@ export function buildJerseyPrompt(jersey: JerseyState): string {
     : "a young South-East Asian male model with athletic build, casual hairstyle, natural skin tone, no specific identity";
 
   return [
-    `Photorealistic full-body portrait of a person wearing a custom ${designName} football/soccer jersey.`,
-    `The jersey design follows the first reference image precisely — same colors, stripes, sponsor text, number, and logo placement.`,
+    `Photorealistic full-body portrait of a person wearing a custom football/soccer jersey.`,
+    `The jersey design follows the first reference image precisely — same colors, ${patternName.toLowerCase()} pattern, sponsor text, number, logo, and text placement.`,
     `Jersey fit: ${fitDescription}.`,
     `Subject: ${facePart}.`,
     `Setting: outdoor urban background, soft natural light, shallow depth of field.`,
