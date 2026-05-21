@@ -5,14 +5,23 @@ import { useState } from "react";
 import { extractJerseyState, useJerseyStore } from "@/lib/store";
 import { exportFrontPng } from "@/lib/jerseyTexture";
 import { getSettings } from "@/lib/settings";
+import { useUiStore } from "@/lib/ui";
 import { ResultModal } from "./ResultModal";
+import { ApiKeyErrorModal, type ApiKeyErrorCode } from "./ApiKeyErrorModal";
 import { Panel } from "./ui/Panel";
+
+interface KeyError {
+  code: ApiKeyErrorCode;
+  message: string;
+}
 
 export function GenerateBar() {
   const store = useJerseyStore();
+  const openSettings = useUiStore((s) => s.openSettings);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<string | null>(null);
+  const [keyError, setKeyError] = useState<KeyError | null>(null);
 
   async function handleGenerate() {
     setError(null);
@@ -39,8 +48,17 @@ export function GenerateBar() {
         }),
       });
 
-      const json = (await res.json()) as { imageUrl?: string; error?: string };
+      const json = (await res.json()) as {
+        imageUrl?: string;
+        error?: string;
+        code?: string;
+      };
+
       if (!res.ok || !json.imageUrl) {
+        if (json.code === "quota" || json.code === "auth") {
+          setKeyError({ code: json.code, message: json.error || "" });
+          return;
+        }
         throw new Error(json.error || "Generate gagal");
       }
       setResult(json.imageUrl);
@@ -89,6 +107,18 @@ export function GenerateBar() {
       </Panel>
 
       {result && <ResultModal imageUrl={result} onClose={() => setResult(null)} />}
+
+      {keyError && (
+        <ApiKeyErrorModal
+          code={keyError.code}
+          rawMessage={keyError.message}
+          onClose={() => setKeyError(null)}
+          onOpenSettings={() => {
+            setKeyError(null);
+            openSettings();
+          }}
+        />
+      )}
     </>
   );
 }

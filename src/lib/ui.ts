@@ -1,0 +1,16 @@
+"use client";
+
+import { create } from "zustand";
+
+interface UiStore {
+  settingsOpen: boolean;
+  openSettings: () => void;
+  closeSettings: () => void;
+}
+
+/** Shared UI state — lets any component open the Settings modal. */
+export const useUiStore = create<UiStore>((set) => ({
+  settingsOpen: false,
+  openSettings: () => set({ settingsOpen: true }),
+  closeSettings: () => set({ settingsOpen: false }),
+}));

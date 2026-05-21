@@ -52,6 +52,13 @@ export async function POST(req: Request) {
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Internal error";
     console.error("[generate] error:", msg);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    const lower = msg.toLowerCase();
+    let code: "quota" | "auth" | "generic" = "generic";
+    if (/429|free trial|limit|upgrade|quota|billing|credit|insufficient|exceeded|payment/.test(lower)) {
+      code = "quota";
+    } else if (/401|403|unauthorized|forbidden|invalid|belum diisi|api key/.test(lower)) {
+      code = "auth";
+    }
+    return NextResponse.json({ error: msg, code }, { status: 500 });
   }
 }

@@ -167,6 +167,7 @@ export function drawJerseyTexture(
   state: JerseyState,
   assets: TextureAssets = {},
   transparent = true,
+  clip = true,
 ) {
   canvas.width = JERSEY_W * SCALE;
   canvas.height = JERSEY_H * SCALE;
@@ -182,7 +183,8 @@ export function drawJerseyTexture(
   const path = new Path2D(JERSEY_PATH);
 
   ctx.save();
-  ctx.clip(path);
+  // clip=false → fill the whole rectangle (used as a 3D decal texture).
+  if (clip) ctx.clip(path);
 
   // base color
   ctx.fillStyle = state.primaryColor;
@@ -270,10 +272,12 @@ export function drawJerseyTexture(
 
   ctx.restore();
 
-  // outline stroke
-  ctx.lineWidth = 3;
-  ctx.strokeStyle = shade(state.primaryColor, -30);
-  ctx.stroke(path);
+  // outline stroke (only for the silhouette-clipped version)
+  if (clip) {
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = shade(state.primaryColor, -30);
+    ctx.stroke(path);
+  }
 }
 
 function roundRect(
