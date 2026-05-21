@@ -1,7 +1,7 @@
 "use client";
 
 import clsx from "clsx";
-import { Grid2x2, Palette, Rotate3d, Shapes, Type } from "lucide-react";
+import { Grid2x2, Palette, RefreshCw, Shapes, Type } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useState } from "react";
 import { extractJerseyState, useJerseyStore } from "@/lib/store";
@@ -34,7 +34,7 @@ type TabId = (typeof TABS)[number]["id"];
 
 export function JerseyDesigner() {
   const [tab, setTab] = useState<TabId>("pattern");
-  const [autoRotate, setAutoRotate] = useState(true);
+  const [showBack, setShowBack] = useState(false);
   const store = useJerseyStore();
   const jerseyState = extractJerseyState(store);
 
@@ -47,18 +47,13 @@ export function JerseyDesigner() {
       <div className="order-1 lg:sticky lg:top-[88px] lg:self-start">
         <div className="rounded-2xl border border-line bg-surface p-4 shadow-card">
           <div className="relative aspect-[4/5] w-full overflow-hidden rounded-xl bg-[#ecebe7]">
-            <JerseyView3D state={jerseyState} autoRotate={autoRotate} />
+            <JerseyView3D state={jerseyState} showBack={showBack} />
             <button
-              onClick={() => setAutoRotate((v) => !v)}
-              className={clsx(
-                "absolute right-3 top-3 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold shadow-card transition",
-                autoRotate
-                  ? "bg-accent text-white"
-                  : "bg-surface text-ink-mute hover:text-ink",
-              )}
+              onClick={() => setShowBack((v) => !v)}
+              className="absolute right-3 top-3 flex items-center gap-1.5 rounded-full bg-ink px-3 py-1.5 text-xs font-bold text-white shadow-card transition hover:bg-ink/85"
             >
-              <Rotate3d className="h-3.5 w-3.5" />
-              {autoRotate ? "Putar ON" : "Putar OFF"}
+              <RefreshCw className="h-3.5 w-3.5" />
+              {showBack ? "Lihat Depan" : "Lihat Belakang"}
             </button>
             <span className="absolute left-3 top-3 rounded-full bg-ink/85 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white">
               3D Live

@@ -1,8 +1,8 @@
 "use client";
 
-import { Canvas } from "@react-three/fiber";
+import { Canvas, useFrame } from "@react-three/fiber";
 import { ContactShadows, OrbitControls } from "@react-three/drei";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import type { JerseyState } from "@/types/jersey";
 import { drawJerseyTexture, resolveAssets } from "@/lib/jerseyTexture";
@@ -19,7 +19,7 @@ const TEX_USPAN = 340 / 400;
 const TEX_V0 = 1 - 450 / 480;
 const TEX_VSPAN = (450 - 50) / 480;
 
-const DEPTH = 0.34;
+const DEPTH = 0.26;
 
 function shade(hex: string, percent: number): string {
   const m = hex.replace("#", "");
@@ -54,29 +54,26 @@ function makeJerseyShape(): THREE.Shape {
 }
 
 /**
- * Build a solid, bevelled jersey geometry.
- * Triangles are sorted into 3 contiguous groups:
- *   0 = front cap  -> front design material
- *   1 = back cap   -> back design material
- *   2 = walls/bevel-> solid edge material
- * UVs map the design artwork onto each cap (un-mirrored for the back).
+ * Solid jersey geometry. Triangles sorted into 3 contiguous groups by face
+ * normal (robust — flat caps always have normal ±Z):
+ *   0 = front cap -> front design   1 = back cap -> back design   2 = walls -> edge
  */
 function buildJerseyGeometry(): THREE.BufferGeometry {
   const raw = new THREE.ExtrudeGeometry(makeJerseyShape(), {
     depth: DEPTH,
     bevelEnabled: true,
-    bevelThickness: 0.085,
-    bevelSize: 0.075,
-    bevelSegments: 4,
+    bevelThickness: 0.05,
+    bevelSize: 0.045,
+    bevelSegments: 3,
     steps: 1,
+    curveSegments: 24,
   });
   raw.computeBoundingBox();
   const bb = raw.boundingBox!;
-  const zMid = (bb.min.z + bb.max.z) / 2;
-  const half = (bb.max.z - bb.min.z) / 2;
-  raw.translate(0, 0, -zMid);
+  raw.translate(0, 0, -(bb.min.z + bb.max.z) / 2);
 
   const src = raw.index ? raw.toNonIndexed() : raw;
+  if (!src.attributes.normal) src.computeVertexNormals();
   const pos = src.attributes.position;
   const nrm = src.attributes.normal;
   const triCount = pos.count / 3;
@@ -85,15 +82,10 @@ function buildJerseyGeometry(): THREE.BufferGeometry {
   const back: number[] = [];
   const wall: number[] = [];
   for (let t = 0; t < triCount; t++) {
-    let zMin = Infinity;
-    let zMax = -Infinity;
-    for (let k = 0; k < 3; k++) {
-      const z = pos.getZ(t * 3 + k);
-      if (z < zMin) zMin = z;
-      if (z > zMax) zMax = z;
-    }
-    if (zMin > half - 0.02) front.push(t);
-    else if (zMax < -half + 0.02) back.push(t);
+    const nz =
+      (nrm.getZ(t * 3) + nrm.getZ(t * 3 + 1) + nrm.getZ(t * 3 + 2)) / 3;
+    if (nz > 0.7) front.push(t);
+    else if (nz < -0.7) back.push(t);
     else wall.push(t);
   }
 
@@ -111,10 +103,9 @@ function buildJerseyGeometry(): THREE.BufferGeometry {
       const si = t * 3 + k;
       const x = pos.getX(si);
       const y = pos.getY(si);
-      const z = pos.getZ(si);
       newPos[w * 3] = x;
       newPos[w * 3 + 1] = y;
-      newPos[w * 3 + 2] = z;
+      newPos[w * 3 + 2] = pos.getZ(si);
       newNrm[w * 3] = nrm.getX(si);
       newNrm[w * 3 + 1] = nrm.getY(si);
       newNrm[w * 3 + 2] = nrm.getZ(si);
@@ -152,21 +143,31 @@ function textureKey(s: JerseyState): string {
 function Jersey({
   geo,
   materials,
+  showBack,
 }: {
   geo: THREE.BufferGeometry;
   materials: THREE.Material[];
+  showBack: boolean;
 }) {
+  const ref = useRef<THREE.Group>(null);
+  useFrame(() => {
+    if (!ref.current) return;
+    const target = showBack ? Math.PI : 0;
+    ref.current.rotation.y += (target - ref.current.rotation.y) * 0.14;
+  });
   return (
-    <mesh geometry={geo} material={materials} castShadow receiveShadow />
+    <group ref={ref}>
+      <mesh geometry={geo} material={materials} castShadow receiveShadow />
+    </group>
   );
 }
 
 export default function JerseyView3D({
   state,
-  autoRotate,
+  showBack,
 }: {
   state: JerseyState;
-  autoRotate: boolean;
+  showBack: boolean;
 }) {
   const geo = useMemo(() => buildJerseyGeometry(), []);
 
@@ -188,11 +189,11 @@ export default function JerseyView3D({
   );
 
   const materials = useMemo(() => {
-    const front = new THREE.MeshStandardMaterial({ roughness: 0.86, metalness: 0.02 });
-    const back = new THREE.MeshStandardMaterial({ roughness: 0.86, metalness: 0.02 });
+    const front = new THREE.MeshStandardMaterial({ roughness: 0.8, metalness: 0.02 });
+    const back = new THREE.MeshStandardMaterial({ roughness: 0.8, metalness: 0.02 });
     const edge = new THREE.MeshStandardMaterial({
-      color: "#1b2a4a",
-      roughness: 0.7,
+      color: "#334155",
+      roughness: 0.65,
       metalness: 0.05,
     });
     if (frontTex) front.map = frontTex;
@@ -217,7 +218,7 @@ export default function JerseyView3D({
       frontTex.needsUpdate = true;
       backTex.needsUpdate = true;
       (materials[2] as THREE.MeshStandardMaterial).color.set(
-        shade(state.secondaryColor, -18),
+        shade(state.primaryColor, -32),
       );
     })();
     return () => {
@@ -228,34 +229,33 @@ export default function JerseyView3D({
 
   return (
     <Canvas
-      camera={{ position: [0, 0, 4.5], fov: 42 }}
+      camera={{ position: [1.35, 0.18, 4.4], fov: 40 }}
       gl={{ preserveDrawingBuffer: true, antialias: true }}
       dpr={[1, 2]}
       shadows
     >
       <color attach="background" args={["#ecebe7"]} />
-      <ambientLight intensity={0.72} />
+      <ambientLight intensity={0.78} />
       <directionalLight position={[3.5, 4.5, 6]} intensity={1.35} castShadow />
-      <directionalLight position={[-4.5, 1, -3]} intensity={0.5} />
-      <directionalLight position={[0, -3, 2]} intensity={0.25} />
-      <group rotation={[0, -0.35, 0]}>
-        <Jersey geo={geo} materials={materials} />
-      </group>
+      <directionalLight position={[-4.5, 1.5, 2]} intensity={0.55} />
+      <directionalLight position={[0, 2, -5]} intensity={0.6} />
+      <Jersey geo={geo} materials={materials} showBack={showBack} />
       <ContactShadows
         position={[0, -1.45, 0]}
-        opacity={0.3}
+        opacity={0.28}
         blur={2.6}
         scale={6}
         far={2.4}
       />
       <OrbitControls
         enablePan={false}
-        autoRotate={autoRotate}
-        autoRotateSpeed={2.6}
+        enableZoom
         minDistance={3.4}
-        maxDistance={6.5}
-        minPolarAngle={Math.PI * 0.3}
-        maxPolarAngle={Math.PI * 0.7}
+        maxDistance={6}
+        minAzimuthAngle={-Math.PI * 0.34}
+        maxAzimuthAngle={Math.PI * 0.34}
+        minPolarAngle={Math.PI * 0.34}
+        maxPolarAngle={Math.PI * 0.62}
       />
     </Canvas>
   );
