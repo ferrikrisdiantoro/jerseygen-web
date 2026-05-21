@@ -41,10 +41,10 @@ export function JerseyDesigner() {
   return (
     <section
       id="designer"
-      className="mx-auto grid max-w-6xl scroll-mt-20 gap-5 px-4 py-6 sm:gap-6 sm:py-10 lg:grid-cols-[minmax(0,440px)_1fr]"
+      className="mx-auto flex max-w-6xl scroll-mt-20 flex-col gap-5 px-4 py-6 sm:gap-6 sm:py-10 lg:grid lg:grid-cols-[minmax(0,440px)_1fr]"
     >
       {/* 3D Preview */}
-      <div className="order-1 mx-auto w-full max-w-md lg:sticky lg:top-[88px] lg:max-w-none lg:self-start">
+      <div className="order-1 mx-auto w-full min-w-0 max-w-md lg:sticky lg:top-[88px] lg:max-w-none lg:self-start">
         <div className="rounded-2xl border border-line bg-surface p-3 shadow-card sm:p-4">
           <div className="relative aspect-[4/5] w-full overflow-hidden rounded-xl bg-[#ecebe7]">
             <JerseyView3D state={jerseyState} showBack={showBack} />

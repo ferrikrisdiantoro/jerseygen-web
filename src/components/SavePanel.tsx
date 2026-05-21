@@ -70,7 +70,7 @@ export function SavePanel() {
           onChange={(e) => setOwnerName(e.target.value)}
           placeholder="Nama pemilik jersey…"
           maxLength={30}
-          className="jg-input flex-1"
+          className="jg-input min-w-0 flex-1"
         />
         <button
           onClick={handleSave}

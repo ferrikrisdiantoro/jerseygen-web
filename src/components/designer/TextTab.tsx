@@ -79,15 +79,15 @@ export function TextTab() {
                 maxLength={16}
                 value={t.value}
                 onChange={(e) => updateCustomText(t.id, { value: e.target.value })}
-                placeholder="Tulis teks…"
-                className="jg-input flex-1 !py-1.5"
+                placeholder="Teks…"
+                className="jg-input !w-0 min-w-0 flex-1 !py-1.5"
               />
               <select
                 value={t.placement}
                 onChange={(e) =>
                   updateCustomText(t.id, { placement: e.target.value as TextPlacement })
                 }
-                className="rounded-lg border border-line bg-surface px-1.5 py-1.5 text-xs font-medium outline-none focus:border-accent"
+                className="min-w-0 shrink rounded-lg border border-line bg-surface px-1.5 py-1.5 text-xs font-medium outline-none focus:border-accent"
               >
                 {PLACEMENTS.map((p) => (
                   <option key={p} value={p}>
