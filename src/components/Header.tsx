@@ -30,7 +30,7 @@ export function Header() {
           <SettingsButton />
           <a
             href="#designer"
-            className="rounded-xl bg-ink px-4 py-2 text-sm font-bold text-white transition hover:bg-ink/85"
+            className="whitespace-nowrap rounded-xl bg-ink px-3 py-2 text-xs font-bold text-white transition hover:bg-ink/85 sm:px-4 sm:text-sm"
           >
             Mulai Desain
           </a>

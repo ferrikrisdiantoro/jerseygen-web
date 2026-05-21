@@ -233,6 +233,7 @@ export default function JerseyView3D({
       gl={{ preserveDrawingBuffer: true, antialias: true }}
       dpr={[1, 2]}
       shadows
+      style={{ touchAction: "pan-y" }}
     >
       <color attach="background" args={["#ecebe7"]} />
       <ambientLight intensity={0.78} />

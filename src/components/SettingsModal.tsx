@@ -2,6 +2,7 @@
 
 import { Eye, EyeOff, KeyRound, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   clearSettings,
   getSettings,
@@ -53,8 +54,10 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
     setModel("");
   }
 
-  return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-ink/55 backdrop-blur-sm">
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[100] overflow-y-auto bg-ink/55 backdrop-blur-sm">
       <div className="flex min-h-full items-center justify-center p-4">
         <div className="my-auto w-full max-w-md overflow-hidden rounded-2xl border border-line bg-surface shadow-pop">
           <div className="flex items-center justify-between border-b border-line px-5 py-4">
@@ -180,6 +183,7 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

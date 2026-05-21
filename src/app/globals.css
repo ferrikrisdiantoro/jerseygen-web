@@ -10,6 +10,7 @@ body {
 body {
   background-color: #f4f4f2;
   -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
 }
 
 ::selection {
