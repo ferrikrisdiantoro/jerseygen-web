@@ -10,8 +10,8 @@ const ITEMS = [
     a: "Bisa. Setelah generate, tombol Download muncul untuk menyimpan gambar PNG. Lembar desain jersey juga bisa diunduh & dicetak.",
   },
   {
-    q: "Berapa kali bisa generate gratis?",
-    a: "Tergantung kuota gratis akun. Jika habis, kamu bisa login dengan email lain untuk lanjut generate.",
+    q: "Berapa kali bisa generate?",
+    a: "Sepuasnya — tidak ada batasan. Klik Generate berkali-kali sampai dapat hasil yang pas.",
   },
   {
     q: "Apakah wajah pasti mirip kalau pakai foto sendiri?",

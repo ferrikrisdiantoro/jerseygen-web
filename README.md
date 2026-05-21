@@ -49,7 +49,6 @@ Env var yang tersedia:
 | `FREEPIK_BASE_URL` | `https://api.freepik.com` | Ganti ke `https://api.magnific.com` bila perlu |
 | `KIEAI_API_KEY` | — | Alternatif, dari https://kie.ai |
 | `KIEAI_MODEL` | `google/nano-banana-edit` | Model image-edit KieAI |
-| `NEXT_PUBLIC_FREE_QUOTA` | `5` | Jumlah generate gratis per browser |
 
 ### Rekomendasi model (Freepik)
 
@@ -83,7 +82,7 @@ src/
 │   ├── PhotoUploadSection.tsx      # toggle muka sendiri + size
 │   ├── SavePanel.tsx               # simpan jersey atas nama + daftar tersimpan
 │   ├── ExportBar.tsx               # download PNG + print design
-│   ├── GenerateBar.tsx             # tombol generate + kuota + email gate
+│   ├── GenerateBar.tsx             # tombol generate AI
 │   ├── ResultModal.tsx             # hasil AI + download
 │   └── designer/
 │       ├── PatternTab.tsx          # preset pattern + upload pattern + scale
@@ -95,7 +94,7 @@ src/
 │   ├── jerseyTexture.ts            # composit kanvas desain (warna+pattern+teks+logo)
 │   ├── savedJerseys.ts             # CRUD jersey tersimpan (localStorage)
 │   ├── prompt.ts                   # build prompt AI
-│   ├── quota.ts                    # quota tracking (localStorage)
+│   ├── settings.ts                 # provider/API key settings (localStorage)
 │   └── ai/                         # provider AI (kieai / freepik / mock)
 └── types/jersey.ts
 ```
@@ -117,7 +116,7 @@ src/
 
 ## Catatan Teknis
 
-- **Quota & email gate**: localStorage based (per browser), tanpa auth real.
+- **Generate**: tanpa batasan & tanpa login — langsung pakai API key dari Setelan/env.
 - **Saved jerseys**: disimpan di localStorage (maks 20 desain terakhir per browser).
 - **3D**: model procedural (bukan file .glb) — ringan & tanpa aset eksternal.
 - Untuk hasil 3D foto-realistis penuh, bisa upgrade ke model `.glb` di iterasi lanjut.
