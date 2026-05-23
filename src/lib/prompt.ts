@@ -35,24 +35,25 @@ function colorName(hex: string): string {
 }
 
 export function buildJerseyPrompt(jersey: JerseyState): string {
-  const primary = colorName(jersey.primaryColor);
-  const secondary = colorName(jersey.secondaryColor);
-  const accent = colorName(jersey.accentColor);
+  const body = colorName(jersey.zones.body.color);
+  const sleeves = colorName(jersey.zones.sleeves.color);
+  const accent = colorName(jersey.zones.frontPanel.color);
 
   const patternDesc =
     jersey.patternType === "solid"
-      ? `a solid ${primary} body`
-      : `a ${primary} body with a ${PATTERN_LABELS[jersey.patternType].toLowerCase()} pattern in ${colorName(jersey.patternColor)}`;
+      ? `a solid ${body} body`
+      : `a ${body} body with a ${PATTERN_LABELS[jersey.patternType].toLowerCase()} pattern in ${colorName(jersey.patternColor)}`;
 
-  // Only list graphics that actually exist in the design.
   const details: string[] = [];
-  if (jersey.sponsorText.trim())
+  if (jersey.sponsorMode === "text" && jersey.sponsorText.trim())
     details.push(`the sponsor text "${jersey.sponsorText.trim()}" across the chest`);
+  if (jersey.sponsorMode === "image" && jersey.sponsorImageDataUrl)
+    details.push(`a sponsor logo image across the chest (as shown in the reference)`);
   if (jersey.playerNumber.trim())
-    details.push(`the number "${jersey.playerNumber.trim()}" printed large`);
+    details.push(`the number "${jersey.playerNumber.trim()}" printed large on the BACK only (not on front)`);
   if (jersey.playerName.trim())
     details.push(`the name "${jersey.playerName.trim()}" on the upper back`);
-  if (jersey.logoDataUrl) details.push(`a small custom logo emblem on the chest`);
+  if (jersey.logoDataUrl) details.push(`a small custom logo on the wearer's LEFT chest`);
   jersey.customTexts
     .filter((t) => t.value.trim())
     .forEach((t) => details.push(`the text "${t.value.trim()}"`));
@@ -74,7 +75,7 @@ export function buildJerseyPrompt(jersey: JerseyState): string {
 
   return [
     `Photorealistic photo of a person wearing the EXACT custom football/soccer jersey shown in the FIRST reference image.`,
-    `The first reference image is a flat 2D design template. Recreate that jersey faithfully as a real worn jersey: ${patternDesc}, ${secondary} sleeves, and ${accent} trim and cuff stripes.`,
+    `Recreate the jersey faithfully as a real worn jersey: ${patternDesc}, ${sleeves} sleeves, and ${accent} trim and cuff stripes.`,
     detailSentence,
     `STRICT RULE: Do NOT invent, add, or change anything on the jersey. Do NOT add any real-world brand or competition marks — no Nike, Adidas, Puma, Emirates, Fly Emirates, Premier League, La Liga, club crests, or any sponsor/logo that is not in the reference. Match the reference jersey 1:1.`,
     subject,

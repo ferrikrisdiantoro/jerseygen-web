@@ -2,16 +2,19 @@
 
 import { create } from "zustand";
 import type {
+  CustomText,
+  JerseyFont,
   JerseyState,
   JerseySize,
   PatternType,
-  CustomText,
+  SponsorMode,
+  ZoneId,
+  ZoneState,
 } from "@/types/jersey";
 
 interface JerseyStore extends JerseyState {
-  setPrimary: (c: string) => void;
-  setSecondary: (c: string) => void;
-  setAccent: (c: string) => void;
+  setZoneColor: (id: ZoneId, color: string) => void;
+  setZoneVisible: (id: ZoneId, visible: boolean) => void;
   setPatternType: (p: PatternType) => void;
   setPatternColor: (c: string) => void;
   setPatternScale: (n: number) => void;
@@ -20,7 +23,10 @@ interface JerseyStore extends JerseyState {
   setPatternTinted: (b: boolean) => void;
   setPlayerName: (s: string) => void;
   setPlayerNumber: (s: string) => void;
+  setSponsorMode: (m: SponsorMode) => void;
   setSponsorText: (s: string) => void;
+  setSponsorImage: (url: string | null) => void;
+  setFont: (f: JerseyFont) => void;
   addCustomText: () => void;
   updateCustomText: (id: string, patch: Partial<CustomText>) => void;
   removeCustomText: (id: string) => void;
@@ -28,14 +34,21 @@ interface JerseyStore extends JerseyState {
   setSize: (s: JerseySize) => void;
   setUseFace: (b: boolean) => void;
   setUserPhoto: (url: string | null) => void;
-  loadState: (s: JerseyState) => void;
+  loadState: (s: unknown) => void;
   reset: () => void;
 }
 
+const DEFAULT_ZONES: Record<ZoneId, ZoneState> = {
+  body: { color: "#1d4ed8", visible: true },
+  sleeves: { color: "#0b1f57", visible: true },
+  collar: { color: "#0b1f57", visible: true },
+  frontPanel: { color: "#fbbf24", visible: true },
+  backPanel: { color: "#fbbf24", visible: true },
+  stitches: { color: "#0b1f57", visible: true },
+};
+
 export const initialJersey: JerseyState = {
-  primaryColor: "#1d4ed8",
-  secondaryColor: "#0b1f57",
-  accentColor: "#fbbf24",
+  zones: DEFAULT_ZONES,
   patternType: "solid",
   patternColor: "#ffffff",
   patternScale: 1,
@@ -44,7 +57,10 @@ export const initialJersey: JerseyState = {
   patternTinted: true,
   playerName: "",
   playerNumber: "",
+  sponsorMode: "text",
   sponsorText: "",
+  sponsorImageDataUrl: null,
+  font: "Inter",
   customTexts: [],
   logoDataUrl: null,
   size: "regular",
@@ -58,7 +74,6 @@ function uid() {
 
 const STATE_KEYS = Object.keys(initialJersey) as (keyof JerseyState)[];
 
-/** Extract only the plain JerseyState fields from the full store object. */
 export function extractJerseyState(store: JerseyStore): JerseyState {
   const src = store as unknown as Record<string, unknown>;
   const out = {} as Record<string, unknown>;
@@ -66,11 +81,42 @@ export function extractJerseyState(store: JerseyStore): JerseyState {
   return out as unknown as JerseyState;
 }
 
+/**
+ * Migrate older saved-jersey shape (had primaryColor/secondaryColor/accentColor)
+ * to the new zones-based shape. Idempotent — passes through new-format states.
+ */
+export function migrateJerseyState(
+  s: Partial<JerseyState> & Record<string, unknown>,
+): JerseyState {
+  const out: JerseyState = { ...initialJersey, ...(s as Partial<JerseyState>) };
+  if (!s.zones) {
+    const primary = (s.primaryColor as string) || DEFAULT_ZONES.body.color;
+    const secondary = (s.secondaryColor as string) || DEFAULT_ZONES.sleeves.color;
+    const accent = (s.accentColor as string) || DEFAULT_ZONES.frontPanel.color;
+    out.zones = {
+      body: { color: primary, visible: true },
+      sleeves: { color: secondary, visible: true },
+      collar: { color: secondary, visible: true },
+      frontPanel: { color: accent, visible: true },
+      backPanel: { color: accent, visible: true },
+      stitches: { color: "#0b1f57", visible: true },
+    };
+  }
+  if (!s.sponsorMode) out.sponsorMode = "text";
+  if (!s.font) out.font = "Inter";
+  return out;
+}
+
 export const useJerseyStore = create<JerseyStore>((set) => ({
   ...initialJersey,
-  setPrimary: (primaryColor) => set({ primaryColor }),
-  setSecondary: (secondaryColor) => set({ secondaryColor }),
-  setAccent: (accentColor) => set({ accentColor }),
+  setZoneColor: (id, color) =>
+    set((st) => ({
+      zones: { ...st.zones, [id]: { ...st.zones[id], color } },
+    })),
+  setZoneVisible: (id, visible) =>
+    set((st) => ({
+      zones: { ...st.zones, [id]: { ...st.zones[id], visible } },
+    })),
   setPatternType: (patternType) => set({ patternType }),
   setPatternColor: (patternColor) => set({ patternColor }),
   setPatternScale: (patternScale) => set({ patternScale }),
@@ -83,7 +129,11 @@ export const useJerseyStore = create<JerseyStore>((set) => ({
   setPatternTinted: (patternTinted) => set({ patternTinted }),
   setPlayerName: (playerName) => set({ playerName }),
   setPlayerNumber: (playerNumber) => set({ playerNumber }),
+  setSponsorMode: (sponsorMode) => set({ sponsorMode }),
   setSponsorText: (sponsorText) => set({ sponsorText }),
+  setSponsorImage: (sponsorImageDataUrl) =>
+    set({ sponsorImageDataUrl, sponsorMode: sponsorImageDataUrl ? "image" : "text" }),
+  setFont: (font) => set({ font }),
   addCustomText: () =>
     set((s) => ({
       customTexts:
@@ -94,7 +144,7 @@ export const useJerseyStore = create<JerseyStore>((set) => ({
               {
                 id: uid(),
                 value: "",
-                color: s.accentColor,
+                color: s.zones.frontPanel.color,
                 placement: "frontTop",
               },
             ],
@@ -111,6 +161,11 @@ export const useJerseyStore = create<JerseyStore>((set) => ({
   setSize: (size) => set({ size }),
   setUseFace: (useFace) => set({ useFace }),
   setUserPhoto: (userPhotoDataUrl) => set({ userPhotoDataUrl }),
-  loadState: (s) => set({ ...s }),
+  loadState: (s) =>
+    set({
+      ...migrateJerseyState(
+        (s ?? {}) as Partial<JerseyState> & Record<string, unknown>,
+      ),
+    }),
   reset: () => set({ ...initialJersey }),
 }));

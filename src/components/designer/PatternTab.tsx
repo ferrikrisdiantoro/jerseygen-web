@@ -29,8 +29,9 @@ export function PatternTab() {
     setPatternDataUrl,
     patternTinted,
     setPatternTinted,
-    primaryColor,
+    zones,
   } = useJerseyStore();
+  const bodyColor = zones.body.color;
   const inputRef = useRef<HTMLInputElement>(null);
 
   function onFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -65,7 +66,7 @@ export function PatternTab() {
                   : "border-line hover:border-line-strong",
               )}
             >
-              <PatternThumb type={p} base={primaryColor} color={patternColor} />
+              <PatternThumb type={p} base={bodyColor} color={patternColor} />
               <span className="text-[9px] font-semibold leading-tight text-ink-mute">
                 {PATTERN_LABELS[p]}
               </span>

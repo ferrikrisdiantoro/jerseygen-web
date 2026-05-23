@@ -23,22 +23,80 @@ export interface CustomText {
   placement: TextPlacement;
 }
 
+// Multi-zone coloring (multi-mesh group dari GLB jersey1.glb).
+export type ZoneId =
+  | "body"
+  | "sleeves"
+  | "collar"
+  | "frontPanel"
+  | "backPanel"
+  | "stitches";
+
+export interface ZoneState {
+  color: string;
+  visible: boolean;
+}
+
+export type Zones = Record<ZoneId, ZoneState>;
+
+export const ZONE_LABELS: Record<ZoneId, string> = {
+  body: "Badan",
+  sleeves: "Lengan",
+  collar: "Kerah",
+  frontPanel: "Panel Depan",
+  backPanel: "Panel Belakang",
+  stitches: "Jahitan",
+};
+
+export type SponsorMode = "text" | "image";
+
+export type JerseyFont =
+  | "Inter"
+  | "Arial"
+  | "Times New Roman"
+  | "Impact"
+  | "Bebas Neue"
+  | "Oswald"
+  | "Anton"
+  | "Roboto Mono";
+
+export const FONT_OPTIONS: { value: JerseyFont; label: string; family: string }[] = [
+  { value: "Inter", label: "Inter (Default)", family: "Inter, sans-serif" },
+  { value: "Arial", label: "Arial", family: "Arial, sans-serif" },
+  {
+    value: "Times New Roman",
+    label: "Times New Roman",
+    family: '"Times New Roman", Times, serif',
+  },
+  { value: "Impact", label: "Impact", family: "Impact, sans-serif" },
+  { value: "Bebas Neue", label: "Bebas Neue", family: '"Bebas Neue", sans-serif' },
+  { value: "Oswald", label: "Oswald", family: "Oswald, sans-serif" },
+  { value: "Anton", label: "Anton", family: "Anton, sans-serif" },
+  { value: "Roboto Mono", label: "Roboto Mono", family: '"Roboto Mono", monospace' },
+];
+
+export function fontFamily(name: JerseyFont): string {
+  const opt = FONT_OPTIONS.find((f) => f.value === name);
+  return opt ? opt.family : "Inter, sans-serif";
+}
+
 export interface JerseyState {
-  // base colors
-  primaryColor: string;
-  secondaryColor: string;
-  accentColor: string;
+  // multi-zone colors + visibility (replaces primary/secondary/accent)
+  zones: Zones;
   // pattern
   patternType: PatternType;
   patternColor: string;
-  patternScale: number; // 0.5 - 2
-  patternOpacity: number; // 0.15 - 1
-  patternDataUrl: string | null; // uploaded custom pattern
-  patternTinted: boolean; // recolor custom pattern with patternColor
+  patternScale: number;
+  patternOpacity: number;
+  patternDataUrl: string | null;
+  patternTinted: boolean;
   // text
   playerName: string;
   playerNumber: string;
+  sponsorMode: SponsorMode;
   sponsorText: string;
+  sponsorImageDataUrl: string | null;
+  font: JerseyFont;
   customTexts: CustomText[];
   // logo
   logoDataUrl: string | null;

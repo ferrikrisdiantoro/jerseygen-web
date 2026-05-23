@@ -1,11 +1,9 @@
-import type { JerseyState, TextPlacement } from "@/types/jersey";
+import { fontFamily, type JerseyState, type TextPlacement } from "@/types/jersey";
 
-// All drawing is done in a 400 x 480 logical coordinate space, then scaled up.
 export const JERSEY_W = 400;
 export const JERSEY_H = 480;
 const SCALE = 2.5;
 
-// Full jersey silhouette (body + sleeves) in logical space.
 export const JERSEY_PATH =
   "M70 80 L150 50 L170 70 Q200 90 230 70 L250 50 L330 80 L370 160 L320 180 " +
   "L320 430 Q320 450 300 450 L100 450 Q80 450 80 430 L80 180 L30 160 Z";
@@ -17,6 +15,7 @@ const COLLAR = "M170 70 Q200 90 230 70 L220 95 Q200 108 180 95 Z";
 export interface TextureAssets {
   patternImg?: HTMLImageElement | null;
   logoImg?: HTMLImageElement | null;
+  sponsorImg?: HTMLImageElement | null;
 }
 
 export function loadImage(dataUrl: string): Promise<HTMLImageElement> {
@@ -33,14 +32,14 @@ function shade(hex: string, percent: number): string {
   const m = hex.replace("#", "");
   if (m.length !== 6) return hex;
   const num = parseInt(m, 16);
-  const adj = (v: number) => Math.max(0, Math.min(255, v + Math.round(255 * (percent / 100))));
+  const adj = (v: number) =>
+    Math.max(0, Math.min(255, v + Math.round(255 * (percent / 100))));
   const r = adj((num >> 16) & 0xff);
   const g = adj((num >> 8) & 0xff);
   const b = adj(num & 0xff);
   return `#${((1 << 24) | (r << 16) | (g << 8) | b).toString(16).slice(1)}`;
 }
 
-/** Recolor an image's opaque pixels to a single color. */
 function tintImage(img: HTMLImageElement, color: string): HTMLCanvasElement {
   const c = document.createElement("canvas");
   c.width = img.naturalWidth || 256;
@@ -132,9 +131,10 @@ function drawText(
   fontPx: number,
   color: string,
   outline: string,
+  family: string,
 ) {
   ctx.save();
-  ctx.font = `900 ${fontPx}px Arial, sans-serif`;
+  ctx.font = `900 ${fontPx}px ${family}`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.lineJoin = "round";
@@ -158,10 +158,19 @@ function placementXY(p: TextPlacement): { x: number; y: number } {
 }
 
 /**
- * Draw one side of the jersey onto a canvas.
- * `side` = "front" or "back".
+ * Make sure the chosen font is loaded before drawing onto a canvas.
+ * Browsers won't use a not-yet-loaded font in canvas.
  */
-export function drawJerseyTexture(
+async function ensureFont(family: string) {
+  if (typeof document === "undefined" || !document.fonts) return;
+  try {
+    await document.fonts.load(`900 48px ${family}`);
+  } catch {
+    // ignore — fallback to system font
+  }
+}
+
+export async function drawJerseyTexture(
   canvas: HTMLCanvasElement,
   side: "front" | "back",
   state: JerseyState,
@@ -169,6 +178,15 @@ export function drawJerseyTexture(
   transparent = true,
   clip = true,
 ) {
+  const family = fontFamily(state.font);
+  await ensureFont(family);
+
+  const { zones } = state;
+  const bodyColor = zones.body.color;
+  const sleeveColor = zones.sleeves.color;
+  const collarColor = zones.collar.color;
+  const accentColor = zones.frontPanel.color;
+
   canvas.width = JERSEY_W * SCALE;
   canvas.height = JERSEY_H * SCALE;
   const ctx = canvas.getContext("2d")!;
@@ -183,47 +201,50 @@ export function drawJerseyTexture(
   const path = new Path2D(JERSEY_PATH);
 
   ctx.save();
-  // clip=false → fill the whole rectangle (used as a 3D decal texture).
   if (clip) ctx.clip(path);
 
-  // base color
-  ctx.fillStyle = state.primaryColor;
+  // body
+  ctx.fillStyle = bodyColor;
   ctx.fillRect(0, 0, JERSEY_W, JERSEY_H);
 
-  // sleeves in secondary color
-  ctx.fillStyle = state.secondaryColor;
-  ctx.fill(new Path2D(SLEEVE_LEFT));
-  ctx.fill(new Path2D(SLEEVE_RIGHT));
+  // sleeves
+  if (zones.sleeves.visible) {
+    ctx.fillStyle = sleeveColor;
+    ctx.fill(new Path2D(SLEEVE_LEFT));
+    ctx.fill(new Path2D(SLEEVE_RIGHT));
+  }
 
   // pattern overlay
   drawPattern(ctx, state, assets);
 
-  // cuff accent stripes
-  ctx.fillStyle = state.accentColor;
+  // cuff accent stripes (using frontPanel color)
+  ctx.fillStyle = accentColor;
   ctx.fillRect(35, 152, 55, 12);
   ctx.fillRect(310, 152, 55, 12);
 
   // collar
-  ctx.fillStyle = state.secondaryColor;
-  ctx.fill(new Path2D(COLLAR));
+  if (zones.collar.visible) {
+    ctx.fillStyle = collarColor;
+    ctx.fill(new Path2D(COLLAR));
+  }
 
-  const outline = shade(state.secondaryColor, -25);
+  const outline = shade(collarColor, -25);
 
   if (side === "front") {
-    // logo
+    // logo — DADA KIRI (wearer's left) = sisi KANAN gambar (x ≈ 234)
     if (assets.logoImg) {
       const lw = 52;
-      ctx.drawImage(assets.logoImg, 116, 168, lw, lw);
+      ctx.drawImage(assets.logoImg, 232, 168, lw, lw);
     }
-    // small chest number
-    if (state.playerNumber) {
-      drawText(ctx, state.playerNumber.slice(0, 2), 286, 196, 34, state.accentColor, outline);
-    }
-    // sponsor band
-    if (state.sponsorText) {
+    // sponsor (text mode atau image mode)
+    if (state.sponsorMode === "image" && assets.sponsorImg) {
+      const sw = 200;
+      const sh = 60;
+      ctx.drawImage(assets.sponsorImg, 200 - sw / 2, 250, sw, sh);
+    } else if (state.sponsorMode === "text" && state.sponsorText) {
       ctx.save();
       ctx.globalAlpha = 0.95;
-      ctx.fillStyle = state.accentColor;
+      ctx.fillStyle = accentColor;
       roundRect(ctx, 96, 244, 208, 44, 8);
       ctx.fill();
       ctx.restore();
@@ -234,22 +255,33 @@ export function drawJerseyTexture(
         267,
         24,
         outline,
-        state.accentColor,
+        accentColor,
+        family,
       );
     }
+    // NO chest number on front (per revisi poin 4)
     // front custom texts
     state.customTexts
       .filter((t) => t.value && (t.placement === "frontTop" || t.placement === "frontBottom"))
       .forEach((t) => {
         const { x, y } = placementXY(t.placement);
-        drawText(ctx, t.value.toUpperCase().slice(0, 16), x, y, 26, t.color, outline);
+        drawText(ctx, t.value.toUpperCase().slice(0, 16), x, y, 26, t.color, outline, family);
       });
   } else {
-    // big back number
+    // back big number
     if (state.playerNumber) {
-      drawText(ctx, state.playerNumber.slice(0, 2), 200, 290, 150, state.accentColor, outline);
+      drawText(
+        ctx,
+        state.playerNumber.slice(0, 2),
+        200,
+        290,
+        150,
+        accentColor,
+        outline,
+        family,
+      );
     }
-    // player name arc on back top
+    // back player name
     if (state.playerName) {
       drawText(
         ctx,
@@ -257,25 +289,24 @@ export function drawJerseyTexture(
         200,
         150,
         38,
-        state.accentColor,
+        accentColor,
         outline,
+        family,
       );
     }
-    // back custom texts
     state.customTexts
       .filter((t) => t.value && (t.placement === "backTop" || t.placement === "backBottom"))
       .forEach((t) => {
         const { x, y } = placementXY(t.placement);
-        drawText(ctx, t.value.toUpperCase().slice(0, 16), x, y, 28, t.color, outline);
+        drawText(ctx, t.value.toUpperCase().slice(0, 16), x, y, 28, t.color, outline, family);
       });
   }
 
   ctx.restore();
 
-  // outline stroke (only for the silhouette-clipped version)
   if (clip) {
     ctx.lineWidth = 3;
-    ctx.strokeStyle = shade(state.primaryColor, -30);
+    ctx.strokeStyle = shade(bodyColor, -30);
     ctx.stroke(path);
   }
 }
@@ -297,21 +328,19 @@ function roundRect(
   ctx.closePath();
 }
 
-/** Build a flat front-only PNG on white background (for AI reference). */
 export async function exportFrontPng(state: JerseyState): Promise<string> {
   const assets = await resolveAssets(state);
   const c = document.createElement("canvas");
-  drawJerseyTexture(c, "front", state, assets, false);
+  await drawJerseyTexture(c, "front", state, assets, false);
   return c.toDataURL("image/png");
 }
 
-/** Build a front+back design sheet PNG on white (for download / print). */
 export async function buildDesignSheet(state: JerseyState): Promise<string> {
   const assets = await resolveAssets(state);
   const front = document.createElement("canvas");
   const back = document.createElement("canvas");
-  drawJerseyTexture(front, "front", state, assets, false);
-  drawJerseyTexture(back, "back", state, assets, false);
+  await drawJerseyTexture(front, "front", state, assets, false);
+  await drawJerseyTexture(back, "back", state, assets, false);
 
   const pad = 40;
   const sheet = document.createElement("canvas");
@@ -333,11 +362,10 @@ export async function buildDesignSheet(state: JerseyState): Promise<string> {
   return sheet.toDataURL("image/png");
 }
 
-/** Small JPEG thumbnail of the front design (for saved-jersey list). */
 export async function buildThumbnail(state: JerseyState): Promise<string> {
   const assets = await resolveAssets(state);
   const full = document.createElement("canvas");
-  drawJerseyTexture(full, "front", state, assets, false);
+  await drawJerseyTexture(full, "front", state, assets, false);
   const thumb = document.createElement("canvas");
   thumb.width = 200;
   thumb.height = Math.round((200 * full.height) / full.width);
@@ -362,6 +390,13 @@ export async function resolveAssets(state: JerseyState): Promise<TextureAssets> 
       assets.logoImg = await loadImage(state.logoDataUrl);
     } catch {
       assets.logoImg = null;
+    }
+  }
+  if (state.sponsorMode === "image" && state.sponsorImageDataUrl) {
+    try {
+      assets.sponsorImg = await loadImage(state.sponsorImageDataUrl);
+    } catch {
+      assets.sponsorImg = null;
     }
   }
   return assets;
