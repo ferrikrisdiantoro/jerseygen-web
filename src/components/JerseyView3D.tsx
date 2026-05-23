@@ -4,7 +4,10 @@ import { Canvas, useFrame } from "@react-three/fiber";
 import { Bounds, ContactShadows, OrbitControls } from "@react-three/drei";
 import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
-import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
+import {
+  mergeGeometries,
+  mergeVertices,
+} from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import type { JerseyState, ZoneId } from "@/types/jersey";
 import { drawBodyMapTexture, resolveAssets } from "@/lib/jerseyTexture";
 
@@ -16,6 +19,40 @@ import { drawBodyMapTexture, resolveAssets } from "@/lib/jerseyTexture";
 const ZONE_IDS: ZoneId[] = [
   "body", "sleeves", "collar", "frontPanel", "backPanel", "stitches",
 ];
+
+/**
+ * Smoothly inflates a flat extruded geometry along Z so the front and back
+ * caps bulge outward — like the jersey is worn on a body. Mid-wall stays
+ * unchanged (continuous, no creases). Merges vertices first so the resulting
+ * normals are smooth.
+ */
+function inflateGeometry(
+  geo: THREE.BufferGeometry,
+  amplitude: number,
+): THREE.BufferGeometry {
+  const merged = mergeVertices(geo) ?? geo;
+  merged.computeBoundingBox();
+  const bb = merged.boundingBox!;
+  const halfZ = (bb.max.z - bb.min.z) / 2 || 1;
+  const cx = (bb.min.x + bb.max.x) / 2;
+  const cy = (bb.min.y + bb.max.y) / 2;
+  const rx = (bb.max.x - bb.min.x) / 2 || 1;
+  const ry = (bb.max.y - bb.min.y) / 2 || 1;
+  const pos = merged.attributes.position;
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i);
+    const y = pos.getY(i);
+    const z = pos.getZ(i);
+    const dx = (x - cx) / rx;
+    const dy = (y - cy) / ry;
+    const r2 = Math.min(1, dx * dx + dy * dy);
+    const inflate = amplitude * (1 - r2) * (z / halfZ);
+    pos.setZ(i, z + inflate);
+  }
+  pos.needsUpdate = true;
+  merged.computeVertexNormals();
+  return merged;
+}
 
 function buildBodyGeometry(): THREE.BufferGeometry {
   const shape = new THREE.Shape();
@@ -37,7 +74,8 @@ function buildBodyGeometry(): THREE.BufferGeometry {
     curveSegments: 24,
   });
   geo.translate(0, 0, -0.21);
-  return geo;
+  // Body curvature — bulge front + back like a worn jersey torso.
+  return inflateGeometry(geo, 0.22);
 }
 
 function buildOneSleeveGeometry(side: 1 | -1): THREE.BufferGeometry {
@@ -59,7 +97,8 @@ function buildOneSleeveGeometry(side: 1 | -1): THREE.BufferGeometry {
     curveSegments: 12,
   });
   geo.translate(0, 0, -0.19);
-  return geo;
+  // Sleeves bulge less than torso.
+  return inflateGeometry(geo, 0.12);
 }
 
 function buildSleevesGeometry(): THREE.BufferGeometry {
@@ -77,25 +116,25 @@ function buildCollarGeometry(): THREE.BufferGeometry {
 }
 
 function buildFrontPanelGeometry(): THREE.BufferGeometry {
-  // horizontal accent stripe on the FRONT chest
+  // accent stripe sitting on the FRONT chest (in front of inflated body)
   const geo = new THREE.BoxGeometry(1.42, 0.16, 0.04);
-  geo.translate(0, 0.65, 0.235);
+  geo.translate(0, 0.65, 0.4);
   return geo;
 }
 
 function buildBackPanelGeometry(): THREE.BufferGeometry {
   const geo = new THREE.BoxGeometry(1.42, 0.16, 0.04);
-  geo.translate(0, 0.65, -0.235);
+  geo.translate(0, 0.65, -0.4);
   return geo;
 }
 
 function buildStitchesGeometry(): THREE.BufferGeometry {
-  // hem stripe at body bottom + small cuff bands at each sleeve end
-  const hem = new THREE.BoxGeometry(1.45, 0.09, 0.45);
-  hem.translate(0, -1.07, 0);
-  const cuffL = new THREE.BoxGeometry(0.32, 0.08, 0.42);
+  // hem band that wraps the inflated bottom + cuff bands at each sleeve end
+  const hem = new THREE.BoxGeometry(1.48, 0.09, 0.6);
+  hem.translate(0, -1.05, 0);
+  const cuffL = new THREE.BoxGeometry(0.32, 0.08, 0.5);
   cuffL.translate(-1.0, 0.4, 0);
-  const cuffR = new THREE.BoxGeometry(0.32, 0.08, 0.42);
+  const cuffR = new THREE.BoxGeometry(0.32, 0.08, 0.5);
   cuffR.translate(1.0, 0.4, 0);
   return mergeGeometries([hem, cuffL, cuffR])!;
 }
