@@ -376,6 +376,90 @@ export async function buildThumbnail(state: JerseyState): Promise<string> {
   return thumb.toDataURL("image/jpeg", 0.7);
 }
 
+/**
+ * Draw the body color + pattern onto a square canvas, for use as the body
+ * material `map` on the 3D model. NO graphics / silhouette — just color+pattern
+ * so it tiles across the GLB body's UV as a fabric texture.
+ */
+export function drawBodyMapTexture(
+  canvas: HTMLCanvasElement,
+  state: JerseyState,
+  assets: TextureAssets = {},
+) {
+  const W = 512;
+  const H = 512;
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext("2d")!;
+
+  ctx.fillStyle = state.zones.body.color;
+  ctx.fillRect(0, 0, W, H);
+
+  if (state.patternType === "solid") return;
+
+  ctx.save();
+  ctx.globalAlpha = state.patternOpacity;
+  ctx.fillStyle = state.patternColor;
+  ctx.strokeStyle = state.patternColor;
+  const s = state.patternScale || 1;
+
+  if (state.patternType === "stripes") {
+    const w = 40 / s;
+    for (let x = -w; x < W + w; x += w * 2) ctx.fillRect(x, 0, w, H);
+  } else if (state.patternType === "hoops") {
+    const h = 40 / s;
+    for (let y = -h; y < H + h; y += h * 2) ctx.fillRect(0, y, W, h);
+  } else if (state.patternType === "halves") {
+    ctx.fillRect(0, 0, W / 2, H);
+  } else if (state.patternType === "sash") {
+    ctx.lineWidth = 100 / s;
+    ctx.beginPath();
+    ctx.moveTo(-40, H);
+    ctx.lineTo(W + 40, -40);
+    ctx.stroke();
+  } else if (state.patternType === "chevron") {
+    const step = 80 / s;
+    ctx.lineWidth = 18 / s;
+    for (let y = -step; y < H + step * 2; y += step) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(W / 2, y + step / 2);
+      ctx.lineTo(W, y);
+      ctx.stroke();
+    }
+  } else if (state.patternType === "grid") {
+    const g = 50 / s;
+    ctx.lineWidth = 5 / s;
+    for (let x = 0; x < W; x += g) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, H);
+      ctx.stroke();
+    }
+    for (let y = 0; y < H; y += g) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(W, y);
+      ctx.stroke();
+    }
+  } else if (state.patternType === "custom" && assets.patternImg) {
+    const src: CanvasImageSource = state.patternTinted
+      ? tintImage(assets.patternImg, state.patternColor)
+      : assets.patternImg;
+    const tile = document.createElement("canvas");
+    const size = Math.max(40, 180 / s);
+    tile.width = size;
+    tile.height = size;
+    tile.getContext("2d")!.drawImage(src, 0, 0, size, size);
+    const pat = ctx.createPattern(tile, "repeat");
+    if (pat) {
+      ctx.fillStyle = pat;
+      ctx.fillRect(0, 0, W, H);
+    }
+  }
+  ctx.restore();
+}
+
 export async function resolveAssets(state: JerseyState): Promise<TextureAssets> {
   const assets: TextureAssets = {};
   if (state.patternType === "custom" && state.patternDataUrl) {

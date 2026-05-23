@@ -5,6 +5,7 @@ import { Bounds, ContactShadows, OrbitControls, useGLTF } from "@react-three/dre
 import { Suspense, useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import type { JerseyState, ZoneId } from "@/types/jersey";
+import { drawBodyMapTexture, resolveAssets } from "@/lib/jerseyTexture";
 
 const MODEL_URL = "/models/jersey1.glb";
 useGLTF.preload(MODEL_URL);
@@ -66,18 +67,61 @@ function ShirtModel({
     return clone;
   }, [scene, materials]);
 
-  // Update colors + visibility reactively from state.
+  const bodyCanvas = useMemo(
+    () => (typeof document !== "undefined" ? document.createElement("canvas") : null),
+    [],
+  );
+  const bodyTex = useMemo(
+    () => (bodyCanvas ? new THREE.CanvasTexture(bodyCanvas) : null),
+    [bodyCanvas],
+  );
+
+  // Update colors + visibility + body pattern reactively from state.
   useEffect(() => {
+    // solid colors per zone
     for (const z of ZONE_IDS) {
+      if (z === "body" && state.patternType !== "solid") continue;
       materials[z].color.set(state.zones[z].color);
+      materials[z].map = null;
+      materials[z].needsUpdate = true;
     }
+    // body pattern as map (if non-solid)
+    if (bodyCanvas && bodyTex) {
+      if (state.patternType === "solid") {
+        materials.body.map = null;
+        materials.body.color.set(state.zones.body.color);
+      } else {
+        (async () => {
+          const assets = await resolveAssets(state);
+          drawBodyMapTexture(bodyCanvas, state, assets);
+          bodyTex.colorSpace = THREE.SRGBColorSpace;
+          bodyTex.anisotropy = 8;
+          bodyTex.needsUpdate = true;
+          materials.body.map = bodyTex;
+          materials.body.color.set("#ffffff");
+          materials.body.needsUpdate = true;
+        })();
+      }
+    }
+    // visibility
     sceneClone.traverse((o) => {
       const mesh = o as THREE.Mesh;
       if (!mesh.isMesh) return;
       const z = mesh.userData.zone as ZoneId | undefined;
       if (z) mesh.visible = state.zones[z].visible;
     });
-  }, [state.zones, materials, sceneClone]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    state.zones,
+    state.patternType,
+    state.patternColor,
+    state.patternScale,
+    state.patternOpacity,
+    state.patternTinted,
+    state.patternDataUrl,
+    materials,
+    sceneClone,
+  ]);
 
   const groupRef = useRef<THREE.Group>(null);
   useFrame(() => {
