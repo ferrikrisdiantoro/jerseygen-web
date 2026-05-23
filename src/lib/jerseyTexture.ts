@@ -403,23 +403,25 @@ export function drawBodyMapTexture(
   ctx.strokeStyle = state.patternColor;
   const s = state.patternScale || 1;
 
+  // 3D body patterns: dibuat tebal supaya tetap kelihatan setelah dipetakan
+  // ke UV jersey (kalau terlalu tipis, akan hilang waktu di-render).
   if (state.patternType === "stripes") {
-    const w = 40 / s;
+    const w = 64 / s;
     for (let x = -w; x < W + w; x += w * 2) ctx.fillRect(x, 0, w, H);
   } else if (state.patternType === "hoops") {
-    const h = 40 / s;
+    const h = 64 / s;
     for (let y = -h; y < H + h; y += h * 2) ctx.fillRect(0, y, W, h);
   } else if (state.patternType === "halves") {
     ctx.fillRect(0, 0, W / 2, H);
   } else if (state.patternType === "sash") {
-    ctx.lineWidth = 100 / s;
+    ctx.lineWidth = 140 / s;
     ctx.beginPath();
     ctx.moveTo(-40, H);
     ctx.lineTo(W + 40, -40);
     ctx.stroke();
   } else if (state.patternType === "chevron") {
-    const step = 80 / s;
-    ctx.lineWidth = 18 / s;
+    const step = 110 / s;
+    ctx.lineWidth = 26 / s;
     for (let y = -step; y < H + step * 2; y += step) {
       ctx.beginPath();
       ctx.moveTo(0, y);
@@ -428,8 +430,8 @@ export function drawBodyMapTexture(
       ctx.stroke();
     }
   } else if (state.patternType === "grid") {
-    const g = 50 / s;
-    ctx.lineWidth = 5 / s;
+    const g = 96 / s;
+    ctx.lineWidth = 12 / s;
     for (let x = 0; x < W; x += g) {
       ctx.beginPath();
       ctx.moveTo(x, 0);
@@ -447,7 +449,7 @@ export function drawBodyMapTexture(
       ? tintImage(assets.patternImg, state.patternColor)
       : assets.patternImg;
     const tile = document.createElement("canvas");
-    const size = Math.max(40, 180 / s);
+    const size = Math.max(60, 220 / s);
     tile.width = size;
     tile.height = size;
     tile.getContext("2d")!.drawImage(src, 0, 0, size, size);

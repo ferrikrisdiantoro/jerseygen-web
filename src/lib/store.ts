@@ -52,7 +52,7 @@ export const initialJersey: JerseyState = {
   patternType: "solid",
   patternColor: "#ffffff",
   patternScale: 1,
-  patternOpacity: 0.5,
+  patternOpacity: 0.8,
   patternDataUrl: null,
   patternTinted: true,
   playerName: "",
