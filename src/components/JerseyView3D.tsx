@@ -1,181 +1,71 @@
 "use client";
 
 import { Canvas, useFrame } from "@react-three/fiber";
-import { Bounds, ContactShadows, OrbitControls } from "@react-three/drei";
-import { useEffect, useMemo, useRef } from "react";
+import { Bounds, ContactShadows, OrbitControls, useGLTF } from "@react-three/drei";
+import { Suspense, useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
-import {
-  mergeGeometries,
-  mergeVertices,
-} from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import type { JerseyState, ZoneId } from "@/types/jersey";
 import { drawBodyMapTexture, resolveAssets } from "@/lib/jerseyTexture";
 
-// ============================================================
-// Procedural jersey — every zone is its own mesh + material,
-// so per-zone coloring & visibility ALWAYS works.
-// ============================================================
+const MODEL_URL = "/models/jersey1.glb";
+useGLTF.preload(MODEL_URL);
 
 const ZONE_IDS: ZoneId[] = [
   "body", "sleeves", "collar", "frontPanel", "backPanel", "stitches",
 ];
 
-/**
- * Smoothly inflates a flat extruded geometry along Z so the front and back
- * caps bulge outward — like the jersey is worn on a body. Mid-wall stays
- * unchanged (continuous, no creases). Merges vertices first so the resulting
- * normals are smooth.
- */
-function inflateGeometry(
-  geo: THREE.BufferGeometry,
-  amplitude: number,
-): THREE.BufferGeometry {
-  const merged = mergeVertices(geo) ?? geo;
-  merged.computeBoundingBox();
-  const bb = merged.boundingBox!;
-  const halfZ = (bb.max.z - bb.min.z) / 2 || 1;
-  const cx = (bb.min.x + bb.max.x) / 2;
-  const cy = (bb.min.y + bb.max.y) / 2;
-  const rx = (bb.max.x - bb.min.x) / 2 || 1;
-  const ry = (bb.max.y - bb.min.y) / 2 || 1;
-  const pos = merged.attributes.position;
-  for (let i = 0; i < pos.count; i++) {
-    const x = pos.getX(i);
-    const y = pos.getY(i);
-    const z = pos.getZ(i);
-    const dx = (x - cx) / rx;
-    const dy = (y - cy) / ry;
-    const r2 = Math.min(1, dx * dx + dy * dy);
-    const inflate = amplitude * (1 - r2) * (z / halfZ);
-    pos.setZ(i, z + inflate);
-  }
-  pos.needsUpdate = true;
-  merged.computeVertexNormals();
-  return merged;
+/** Classify a GLB mesh into a colorable zone based on the designer's naming. */
+function classifyZone(name: string): ZoneId | null {
+  if (/LogoMesh/i.test(name)) return null; // placeholder logo patches → hide
+  if (/^HMC MANGFX/i.test(name)) return "sleeves";
+  if (/^PROBASKET CUELLO/i.test(name)) return "collar";
+  if (/^HMC DEL/i.test(name)) return "frontPanel";
+  if (/^HMC ESP/i.test(name)) return "backPanel";
+  if (/^PROBASKET ADULTO CURA/i.test(name)) return "body";
+  if (/^Puntada|^TexturedStitchess/i.test(name)) return "stitches";
+  return "body";
 }
 
-function buildBodyGeometry(): THREE.BufferGeometry {
-  const shape = new THREE.Shape();
-  shape.moveTo(-0.7, 1.0);
-  shape.quadraticCurveTo(-0.55, 1.08, -0.2, 1.08);
-  shape.quadraticCurveTo(0, 0.94, 0.2, 1.08);
-  shape.quadraticCurveTo(0.55, 1.08, 0.7, 1.0);
-  shape.lineTo(0.72, -1.05);
-  shape.quadraticCurveTo(0.72, -1.18, 0.6, -1.18);
-  shape.lineTo(-0.6, -1.18);
-  shape.quadraticCurveTo(-0.72, -1.18, -0.72, -1.05);
-  shape.closePath();
-  const geo = new THREE.ExtrudeGeometry(shape, {
-    depth: 0.42,
-    bevelEnabled: true,
-    bevelThickness: 0.08,
-    bevelSize: 0.06,
-    bevelSegments: 4,
-    curveSegments: 24,
-  });
-  geo.translate(0, 0, -0.21);
-  // Body curvature — bulge front + back like a worn jersey torso.
-  return inflateGeometry(geo, 0.22);
-}
-
-function buildOneSleeveGeometry(side: 1 | -1): THREE.BufferGeometry {
-  const x0 = 0.7 * side;
-  const x1 = 1.15 * side;
-  const x1b = 1.0 * side;
-  const shape = new THREE.Shape();
-  shape.moveTo(x0, 1.0);
-  shape.lineTo(x1, 0.85);
-  shape.lineTo(x1b, 0.4);
-  shape.lineTo(x0, 0.4);
-  shape.closePath();
-  const geo = new THREE.ExtrudeGeometry(shape, {
-    depth: 0.38,
-    bevelEnabled: true,
-    bevelThickness: 0.06,
-    bevelSize: 0.05,
-    bevelSegments: 3,
-    curveSegments: 12,
-  });
-  geo.translate(0, 0, -0.19);
-  // Sleeves bulge less than torso.
-  return inflateGeometry(geo, 0.12);
-}
-
-function buildSleevesGeometry(): THREE.BufferGeometry {
-  const left = buildOneSleeveGeometry(-1);
-  const right = buildOneSleeveGeometry(1);
-  return mergeGeometries([left, right])!;
-}
-
-function buildCollarGeometry(): THREE.BufferGeometry {
-  // a thin ring around the neck opening (full torus)
-  const geo = new THREE.TorusGeometry(0.22, 0.05, 14, 36);
-  geo.rotateX(Math.PI / 2);
-  geo.translate(0, 1.0, 0);
-  return geo;
-}
-
-function buildFrontPanelGeometry(): THREE.BufferGeometry {
-  // accent stripe sitting on the FRONT chest (in front of inflated body)
-  const geo = new THREE.BoxGeometry(1.42, 0.16, 0.04);
-  geo.translate(0, 0.65, 0.4);
-  return geo;
-}
-
-function buildBackPanelGeometry(): THREE.BufferGeometry {
-  const geo = new THREE.BoxGeometry(1.42, 0.16, 0.04);
-  geo.translate(0, 0.65, -0.4);
-  return geo;
-}
-
-function buildStitchesGeometry(): THREE.BufferGeometry {
-  // hem band that wraps the inflated bottom + cuff bands at each sleeve end
-  const hem = new THREE.BoxGeometry(1.48, 0.09, 0.6);
-  hem.translate(0, -1.05, 0);
-  const cuffL = new THREE.BoxGeometry(0.32, 0.08, 0.5);
-  cuffL.translate(-1.0, 0.4, 0);
-  const cuffR = new THREE.BoxGeometry(0.32, 0.08, 0.5);
-  cuffR.translate(1.0, 0.4, 0);
-  return mergeGeometries([hem, cuffL, cuffR])!;
-}
-
-function buildZoneGeometries() {
-  return {
-    body: buildBodyGeometry(),
-    sleeves: buildSleevesGeometry(),
-    collar: buildCollarGeometry(),
-    frontPanel: buildFrontPanelGeometry(),
-    backPanel: buildBackPanelGeometry(),
-    stitches: buildStitchesGeometry(),
-  } as Record<ZoneId, THREE.BufferGeometry>;
-}
-
-function Jersey({
+function ShirtModel({
   state,
   showBack,
 }: {
   state: JerseyState;
   showBack: boolean;
 }) {
-  const geos = useMemo(() => buildZoneGeometries(), []);
+  const { scene } = useGLTF(MODEL_URL);
 
   const materials = useMemo(() => {
-    const make = (color: string) =>
-      new THREE.MeshStandardMaterial({
-        color,
-        roughness: 0.82,
-        metalness: 0.04,
-      });
+    const make = () =>
+      new THREE.MeshStandardMaterial({ roughness: 0.85, metalness: 0.04 });
     const m: Record<ZoneId, THREE.MeshStandardMaterial> = {
-      body: make("#1d4ed8"),
-      sleeves: make("#0b1f57"),
-      collar: make("#0b1f57"),
-      frontPanel: make("#fbbf24"),
-      backPanel: make("#fbbf24"),
-      stitches: make("#0b1f57"),
+      body: make(),
+      sleeves: make(),
+      collar: make(),
+      frontPanel: make(),
+      backPanel: make(),
+      stitches: make(),
     };
     return m;
   }, []);
+
+  const sceneClone = useMemo(() => {
+    const clone = scene.clone(true);
+    clone.traverse((o) => {
+      const mesh = o as THREE.Mesh;
+      if (!mesh.isMesh) return;
+      const z = classifyZone(mesh.name);
+      if (z === null) {
+        mesh.visible = false;
+        return;
+      }
+      mesh.material = materials[z];
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      mesh.userData.zone = z;
+    });
+    return clone;
+  }, [scene, materials]);
 
   const bodyCanvas = useMemo(
     () => (typeof document !== "undefined" ? document.createElement("canvas") : null),
@@ -186,20 +76,13 @@ function Jersey({
     [bodyCanvas],
   );
 
-  const meshRefs = useRef<Record<ZoneId, THREE.Mesh | null>>({
-    body: null, sleeves: null, collar: null,
-    frontPanel: null, backPanel: null, stitches: null,
-  });
-
   useEffect(() => {
-    // colors per zone
     for (const z of ZONE_IDS) {
       if (z === "body" && state.patternType !== "solid") continue;
       materials[z].color.set(state.zones[z].color);
       materials[z].map = null;
       materials[z].needsUpdate = true;
     }
-    // body pattern (map)
     if (bodyCanvas && bodyTex) {
       if (state.patternType === "solid") {
         materials.body.map = null;
@@ -217,11 +100,12 @@ function Jersey({
         })();
       }
     }
-    // visibility per zone
-    for (const z of ZONE_IDS) {
-      const mesh = meshRefs.current[z];
-      if (mesh) mesh.visible = state.zones[z].visible;
-    }
+    sceneClone.traverse((o) => {
+      const mesh = o as THREE.Mesh;
+      if (!mesh.isMesh) return;
+      const z = mesh.userData.zone as ZoneId | undefined;
+      if (z) mesh.visible = state.zones[z].visible;
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     state.zones,
@@ -232,6 +116,7 @@ function Jersey({
     state.patternTinted,
     state.patternDataUrl,
     materials,
+    sceneClone,
   ]);
 
   const groupRef = useRef<THREE.Group>(null);
@@ -244,18 +129,7 @@ function Jersey({
 
   return (
     <group ref={groupRef}>
-      {ZONE_IDS.map((z) => (
-        <mesh
-          key={z}
-          ref={(el) => {
-            meshRefs.current[z] = el;
-          }}
-          geometry={geos[z]}
-          material={materials[z]}
-          castShadow
-          receiveShadow
-        />
-      ))}
+      <primitive object={sceneClone} />
     </group>
   );
 }
@@ -269,7 +143,7 @@ export default function JerseyView3D({
 }) {
   return (
     <Canvas
-      camera={{ position: [0, 0.05, 4.2], fov: 30 }}
+      camera={{ position: [0, 0, 3], fov: 30 }}
       gl={{ preserveDrawingBuffer: true, antialias: true }}
       dpr={[1, 2]}
       shadows
@@ -281,23 +155,25 @@ export default function JerseyView3D({
       <directionalLight position={[-4, 1.5, 2]} intensity={0.55} />
       <directionalLight position={[0, 2, -5]} intensity={0.55} />
 
-      <Bounds fit clip margin={1.15}>
-        <Jersey state={state} showBack={showBack} />
-      </Bounds>
+      <Suspense fallback={null}>
+        <Bounds fit clip margin={1.15}>
+          <ShirtModel state={state} showBack={showBack} />
+        </Bounds>
+      </Suspense>
 
       <ContactShadows
-        position={[0, -1.3, 0]}
+        position={[0, -1, 0]}
         opacity={0.3}
         blur={2.6}
         scale={5}
-        far={2.4}
+        far={2.2}
       />
       <OrbitControls
         makeDefault
         enablePan={false}
         enableZoom
-        minDistance={2.5}
-        maxDistance={7}
+        minDistance={1.4}
+        maxDistance={6}
         minPolarAngle={Math.PI * 0.3}
         maxPolarAngle={Math.PI * 0.68}
         minAzimuthAngle={-Math.PI * 0.42}

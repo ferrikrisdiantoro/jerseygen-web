@@ -5,13 +5,13 @@ import { Eye, EyeOff } from "lucide-react";
 import { useJerseyStore } from "@/lib/store";
 import { ZONE_LABELS, type ZoneId } from "@/types/jersey";
 
+// Hanya zona yang BENERAN visible & terklasifikasi rapi di GLB klien.
+// Panel Depan/Belakang/Jahitan disembunyikan karena di model ini cuma
+// jahitan dekoratif kecil yang tidak terlihat.
 const ZONE_ORDER: ZoneId[] = [
   "body",
   "sleeves",
   "collar",
-  "frontPanel",
-  "backPanel",
-  "stitches",
 ];
 
 const PALETTE = [
