@@ -1,29 +1,51 @@
 "use client";
 
 import { Canvas, useFrame } from "@react-three/fiber";
-import { Bounds, ContactShadows, OrbitControls, useGLTF } from "@react-three/drei";
+import {
+  Bounds,
+  ContactShadows,
+  Decal,
+  OrbitControls,
+  useGLTF,
+} from "@react-three/drei";
 import { Suspense, useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
-import type { JerseyState, ZoneId } from "@/types/jersey";
-import { drawBodyMapTexture, resolveAssets } from "@/lib/jerseyTexture";
+import type { JerseyState } from "@/types/jersey";
+import {
+  drawBodyMapTexture,
+  drawJerseyTexture,
+  resolveAssets,
+} from "@/lib/jerseyTexture";
 
-const MODEL_URL = "/models/jersey1.glb";
+const MODEL_URL = "/models/shirt.glb";
 useGLTF.preload(MODEL_URL);
 
-const ZONE_IDS: ZoneId[] = [
-  "body", "sleeves", "collar", "frontPanel", "backPanel", "stitches",
-];
+// ====== KONFIG DECAL (sesuaikan kalau posisi/skala desain di model kurang pas) ======
+const FRONT_DECAL = {
+  position: [0, 0.04, 0.13] as [number, number, number],
+  rotation: [0, 0, 0] as [number, number, number],
+  scale: [0.46, 0.56, 0.45] as [number, number, number],
+};
+const BACK_DECAL = {
+  position: [0, 0.04, -0.13] as [number, number, number],
+  rotation: [0, Math.PI, 0] as [number, number, number],
+  scale: [0.46, 0.56, 0.45] as [number, number, number],
+};
+// =====================================================================================
 
-/** Classify a GLB mesh into a colorable zone based on the designer's naming. */
-function classifyZone(name: string): ZoneId | null {
-  if (/LogoMesh/i.test(name)) return null; // placeholder logo patches → hide
-  if (/^HMC MANGFX/i.test(name)) return "sleeves";
-  if (/^PROBASKET CUELLO/i.test(name)) return "collar";
-  if (/^HMC DEL/i.test(name)) return "frontPanel";
-  if (/^HMC ESP/i.test(name)) return "backPanel";
-  if (/^PROBASKET ADULTO CURA/i.test(name)) return "body";
-  if (/^Puntada|^TexturedStitchess/i.test(name)) return "stitches";
-  return "body";
+function textureKey(s: JerseyState): string {
+  return [
+    s.zones.body.color, s.zones.sleeves.color, s.zones.collar.color,
+    s.zones.frontPanel.color, s.zones.backPanel.color, s.zones.stitches.color,
+    s.patternType, s.patternColor, s.patternScale, s.patternOpacity, s.patternTinted,
+    s.patternDataUrl ? "p" + s.patternDataUrl.length : "0",
+    s.logoDataUrl ? "l" + s.logoDataUrl.length : "0",
+    s.playerName, s.playerNumber,
+    s.sponsorMode, s.sponsorText,
+    s.sponsorImageDataUrl ? "s" + s.sponsorImageDataUrl.length : "0",
+    s.font,
+    s.customTexts.map((t) => `${t.value}|${t.color}|${t.placement}`).join(","),
+  ].join("~");
 }
 
 function ShirtModel({
@@ -35,107 +57,87 @@ function ShirtModel({
 }) {
   const { scene } = useGLTF(MODEL_URL);
 
-  const materials = useMemo(() => {
-    const make = () =>
-      new THREE.MeshStandardMaterial({ roughness: 0.85, metalness: 0.04 });
-    const m: Record<ZoneId, THREE.MeshStandardMaterial> = {
-      body: make(),
-      sleeves: make(),
-      collar: make(),
-      frontPanel: make(),
-      backPanel: make(),
-      stitches: make(),
-    };
-    return m;
-  }, []);
-
-  const sceneClone = useMemo(() => {
-    const clone = scene.clone(true);
-    clone.traverse((o) => {
-      const mesh = o as THREE.Mesh;
-      if (!mesh.isMesh) return;
-      const z = classifyZone(mesh.name);
-      if (z === null) {
-        mesh.visible = false;
-        return;
-      }
-      mesh.material = materials[z];
-      mesh.castShadow = true;
-      mesh.receiveShadow = true;
-      mesh.userData.zone = z;
+  const geometry = useMemo(() => {
+    let g: THREE.BufferGeometry | null = null;
+    scene.traverse((o) => {
+      const m = o as THREE.Mesh;
+      if (!g && m.isMesh) g = m.geometry;
     });
-    return clone;
-  }, [scene, materials]);
+    return g;
+  }, [scene]);
 
-  const bodyCanvas = useMemo(
-    () => (typeof document !== "undefined" ? document.createElement("canvas") : null),
-    [],
-  );
+  // canvases + textures
+  const bodyCanvas = useMemo(() => document.createElement("canvas"), []);
+  const frontCanvas = useMemo(() => document.createElement("canvas"), []);
+  const backCanvas = useMemo(() => document.createElement("canvas"), []);
   const bodyTex = useMemo(
-    () => (bodyCanvas ? new THREE.CanvasTexture(bodyCanvas) : null),
+    () => new THREE.CanvasTexture(bodyCanvas),
     [bodyCanvas],
   );
+  const frontTex = useMemo(
+    () => new THREE.CanvasTexture(frontCanvas),
+    [frontCanvas],
+  );
+  const backTex = useMemo(
+    () => new THREE.CanvasTexture(backCanvas),
+    [backCanvas],
+  );
+  const baseMat = useMemo(
+    () => new THREE.MeshStandardMaterial({ roughness: 0.82, metalness: 0.04 }),
+    [],
+  );
 
+  const key = textureKey(state);
   useEffect(() => {
-    for (const z of ZONE_IDS) {
-      if (z === "body" && state.patternType !== "solid") continue;
-      materials[z].color.set(state.zones[z].color);
-      materials[z].map = null;
-      materials[z].needsUpdate = true;
-    }
-    if (bodyCanvas && bodyTex) {
+    let cancelled = false;
+    (async () => {
+      const assets = await resolveAssets(state);
+      if (cancelled) return;
+
+      // body color + pattern (as material map)
       if (state.patternType === "solid") {
-        materials.body.map = null;
-        materials.body.color.set(state.zones.body.color);
+        baseMat.map = null;
+        baseMat.color.set(state.zones.body.color);
       } else {
-        (async () => {
-          const assets = await resolveAssets(state);
-          drawBodyMapTexture(bodyCanvas, state, assets);
-          bodyTex.colorSpace = THREE.SRGBColorSpace;
-          bodyTex.anisotropy = 8;
-          // Tile-friendly patterns repeat across the body's UV islands
-          // (front and back of the jersey are separate UV regions) so
-          // the pattern looks continuous instead of split.
-          const tileable =
-            state.patternType === "stripes" ||
-            state.patternType === "hoops" ||
-            state.patternType === "grid" ||
-            state.patternType === "chevron" ||
-            state.patternType === "custom";
-          if (tileable) {
-            bodyTex.wrapS = THREE.RepeatWrapping;
-            bodyTex.wrapT = THREE.RepeatWrapping;
-            bodyTex.repeat.set(2, 2);
-          } else {
-            bodyTex.wrapS = THREE.ClampToEdgeWrapping;
-            bodyTex.wrapT = THREE.ClampToEdgeWrapping;
-            bodyTex.repeat.set(1, 1);
-          }
-          bodyTex.needsUpdate = true;
-          materials.body.map = bodyTex;
-          materials.body.color.set("#ffffff");
-          materials.body.needsUpdate = true;
-        })();
+        drawBodyMapTexture(bodyCanvas, state, assets);
+        bodyTex.colorSpace = THREE.SRGBColorSpace;
+        bodyTex.anisotropy = 8;
+        const tileable =
+          state.patternType === "stripes" ||
+          state.patternType === "hoops" ||
+          state.patternType === "grid" ||
+          state.patternType === "chevron" ||
+          state.patternType === "custom";
+        if (tileable) {
+          bodyTex.wrapS = THREE.RepeatWrapping;
+          bodyTex.wrapT = THREE.RepeatWrapping;
+          bodyTex.repeat.set(2, 2);
+        } else {
+          bodyTex.wrapS = THREE.ClampToEdgeWrapping;
+          bodyTex.wrapT = THREE.ClampToEdgeWrapping;
+          bodyTex.repeat.set(1, 1);
+        }
+        bodyTex.needsUpdate = true;
+        baseMat.map = bodyTex;
+        baseMat.color.set("#ffffff");
       }
-    }
-    sceneClone.traverse((o) => {
-      const mesh = o as THREE.Mesh;
-      if (!mesh.isMesh) return;
-      const z = mesh.userData.zone as ZoneId | undefined;
-      if (z) mesh.visible = state.zones[z].visible;
-    });
+      baseMat.needsUpdate = true;
+
+      // front + back design decals (sponsor / number / name / logo / customTexts)
+      await drawJerseyTexture(frontCanvas, "front", state, assets, false, false);
+      await drawJerseyTexture(backCanvas, "back", state, assets, false, false);
+      frontTex.colorSpace = THREE.SRGBColorSpace;
+      backTex.colorSpace = THREE.SRGBColorSpace;
+      frontTex.anisotropy = 8;
+      backTex.anisotropy = 8;
+      frontTex.needsUpdate = true;
+      backTex.needsUpdate = true;
+    })();
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    state.zones,
-    state.patternType,
-    state.patternColor,
-    state.patternScale,
-    state.patternOpacity,
-    state.patternTinted,
-    state.patternDataUrl,
-    materials,
-    sceneClone,
-  ]);
+  }, [key]);
 
   const groupRef = useRef<THREE.Group>(null);
   useFrame(() => {
@@ -145,9 +147,40 @@ function ShirtModel({
       (target - groupRef.current.rotation.y) * 0.14;
   });
 
+  if (!geometry) return null;
+
   return (
     <group ref={groupRef}>
-      <primitive object={sceneClone} />
+      <mesh geometry={geometry} material={baseMat} castShadow receiveShadow>
+        <Decal
+          position={FRONT_DECAL.position}
+          rotation={FRONT_DECAL.rotation}
+          scale={FRONT_DECAL.scale}
+        >
+          <meshStandardMaterial
+            map={frontTex}
+            transparent
+            polygonOffset
+            polygonOffsetFactor={-10}
+            roughness={0.9}
+            metalness={0.02}
+          />
+        </Decal>
+        <Decal
+          position={BACK_DECAL.position}
+          rotation={BACK_DECAL.rotation}
+          scale={BACK_DECAL.scale}
+        >
+          <meshStandardMaterial
+            map={backTex}
+            transparent
+            polygonOffset
+            polygonOffsetFactor={-10}
+            roughness={0.9}
+            metalness={0.02}
+          />
+        </Decal>
+      </mesh>
     </group>
   );
 }
@@ -161,7 +194,7 @@ export default function JerseyView3D({
 }) {
   return (
     <Canvas
-      camera={{ position: [0, 0, 3], fov: 30 }}
+      camera={{ position: [0, 0, 3], fov: 28 }}
       gl={{ preserveDrawingBuffer: true, antialias: true }}
       dpr={[1, 2]}
       shadows
