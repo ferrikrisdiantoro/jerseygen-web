@@ -420,8 +420,9 @@ export function drawBodyMapTexture(
     ctx.lineTo(W + 40, -40);
     ctx.stroke();
   } else if (state.patternType === "chevron") {
-    const step = 110 / s;
-    ctx.lineWidth = 26 / s;
+    // step must divide H (512) so the chevron pattern is tileable.
+    const step = 128 / s;
+    ctx.lineWidth = 22 / s;
     for (let y = -step; y < H + step * 2; y += step) {
       ctx.beginPath();
       ctx.moveTo(0, y);

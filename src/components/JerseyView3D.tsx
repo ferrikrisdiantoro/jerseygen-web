@@ -93,6 +93,24 @@ function ShirtModel({
           drawBodyMapTexture(bodyCanvas, state, assets);
           bodyTex.colorSpace = THREE.SRGBColorSpace;
           bodyTex.anisotropy = 8;
+          // Tile-friendly patterns repeat across the body's UV islands
+          // (front and back of the jersey are separate UV regions) so
+          // the pattern looks continuous instead of split.
+          const tileable =
+            state.patternType === "stripes" ||
+            state.patternType === "hoops" ||
+            state.patternType === "grid" ||
+            state.patternType === "chevron" ||
+            state.patternType === "custom";
+          if (tileable) {
+            bodyTex.wrapS = THREE.RepeatWrapping;
+            bodyTex.wrapT = THREE.RepeatWrapping;
+            bodyTex.repeat.set(2, 2);
+          } else {
+            bodyTex.wrapS = THREE.ClampToEdgeWrapping;
+            bodyTex.wrapT = THREE.ClampToEdgeWrapping;
+            bodyTex.repeat.set(1, 1);
+          }
           bodyTex.needsUpdate = true;
           materials.body.map = bodyTex;
           materials.body.color.set("#ffffff");
