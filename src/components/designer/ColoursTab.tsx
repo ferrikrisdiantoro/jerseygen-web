@@ -5,12 +5,14 @@ import { Eye, EyeOff } from "lucide-react";
 import { useJerseyStore } from "@/lib/store";
 import { ZONE_LABELS, type ZoneId } from "@/types/jersey";
 
-// Model GLB shirt = single mesh, jadi cuma "Badan" yang affect 3D view.
-// Zona Lengan/Kerah dll tetap pengaruh ke flat preview & AI generate.
+// Versi 2D — semua zona berfungsi penuh & langsung tampil di preview.
 const ZONE_ORDER: ZoneId[] = [
   "body",
   "sleeves",
   "collar",
+  "frontPanel",
+  "backPanel",
+  "stitches",
 ];
 
 const PALETTE = [
