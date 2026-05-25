@@ -4,13 +4,21 @@ export const JERSEY_W = 400;
 export const JERSEY_H = 480;
 const SCALE = 2.5;
 
+// Front silhouette has a V-neck dip. Back is flat/higher (like a real jersey).
 export const JERSEY_PATH =
   "M70 80 L150 50 L170 70 Q200 90 230 70 L250 50 L330 80 L370 160 L320 180 " +
   "L320 430 Q320 450 300 450 L100 450 Q80 450 80 430 L80 180 L30 160 Z";
 
+export const JERSEY_PATH_BACK =
+  "M70 80 L150 50 L172 58 L228 58 L250 50 L330 80 L370 160 L320 180 " +
+  "L320 430 Q320 450 300 450 L100 450 Q80 450 80 430 L80 180 L30 160 Z";
+
 const SLEEVE_LEFT = "M70 80 L30 160 L80 180 L110 110 Z";
 const SLEEVE_RIGHT = "M330 80 L370 160 L320 180 L290 110 Z";
-const COLLAR = "M170 70 Q200 90 230 70 L220 95 Q200 108 180 95 Z";
+const COLLAR_FRONT = "M170 70 Q200 90 230 70 L220 95 Q200 108 180 95 Z";
+const COLLAR_BACK = "M172 58 L228 58 L226 72 L174 72 Z";
+// Small label tag at the back of the neck — visual cue this is the back.
+const BACK_TAG = "M188 60 L212 60 L210 70 L190 70 Z";
 
 export interface TextureAssets {
   patternImg?: HTMLImageElement | null;
@@ -198,7 +206,11 @@ export async function drawJerseyTexture(
     ctx.fillRect(0, 0, JERSEY_W, JERSEY_H);
   }
 
-  const path = new Path2D(JERSEY_PATH);
+  // Different silhouette per side so front/back are visually distinct
+  // even when the design is empty (V-neck front vs flat-collar back).
+  const path = new Path2D(
+    side === "back" ? JERSEY_PATH_BACK : JERSEY_PATH,
+  );
 
   ctx.save();
   if (clip) ctx.clip(path);
@@ -222,10 +234,15 @@ export async function drawJerseyTexture(
   ctx.fillRect(35, 152, 55, 12);
   ctx.fillRect(310, 152, 55, 12);
 
-  // collar
+  // collar — V-neck on front, flat band on back
   if (zones.collar.visible) {
     ctx.fillStyle = collarColor;
-    ctx.fill(new Path2D(COLLAR));
+    ctx.fill(new Path2D(side === "back" ? COLLAR_BACK : COLLAR_FRONT));
+    if (side === "back") {
+      // small jersey label tag at back of neck for a clear visual cue
+      ctx.fillStyle = shade(collarColor, 25);
+      ctx.fill(new Path2D(BACK_TAG));
+    }
   }
 
   const outline = shade(collarColor, -25);
