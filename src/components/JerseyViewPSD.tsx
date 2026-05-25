@@ -14,6 +14,11 @@ function stateKey(s: JerseyState, showBack: boolean): string {
     z.frontPanel.color, z.frontPanel.visible,
     z.backPanel.color, z.backPanel.visible,
     z.stitches.color, z.stitches.visible,
+    // pattern
+    s.patternType, s.patternColor, s.patternScale, s.patternOpacity,
+    s.patternTinted,
+    s.patternDataUrl ? "p" + s.patternDataUrl.length : "0",
+    // text & graphics
     s.playerName, s.playerNumber,
     s.sponsorMode, s.sponsorText,
     s.sponsorImageDataUrl ? "s" + s.sponsorImageDataUrl.length : "0",
