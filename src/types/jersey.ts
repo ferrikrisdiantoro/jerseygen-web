@@ -43,9 +43,9 @@ export const ZONE_LABELS: Record<ZoneId, string> = {
   body: "Badan",
   sleeves: "Lengan",
   collar: "Kerah",
-  frontPanel: "Panel Depan",
+  frontPanel: "Panel Bahu",
   backPanel: "Panel Belakang",
-  stitches: "Jahitan",
+  stitches: "Stripe Lengan",
 };
 
 export type SponsorMode = "text" | "image";

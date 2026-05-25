@@ -14,7 +14,7 @@ import { SavePanel } from "./SavePanel";
 import { ExportBar } from "./ExportBar";
 import { GenerateBar } from "./GenerateBar";
 
-const JerseyView2D = dynamic(() => import("./JerseyView2D"), {
+const JerseyViewPSD = dynamic(() => import("./JerseyViewPSD"), {
   ssr: false,
   loading: () => (
     <div className="grid h-full w-full place-items-center text-sm font-medium text-ink-soft">
@@ -47,7 +47,7 @@ export function JerseyDesigner() {
       <div className="order-1 mx-auto w-full min-w-0 max-w-md lg:sticky lg:top-[88px] lg:max-w-none lg:self-start">
         <div className="rounded-2xl border border-line bg-surface p-3 shadow-card sm:p-4">
           <div className="relative aspect-[4/5] w-full overflow-hidden rounded-xl bg-[#ecebe7]">
-            <JerseyView2D state={jerseyState} showBack={showBack} />
+            <JerseyViewPSD state={jerseyState} showBack={showBack} />
             <button
               onClick={() => setShowBack((v) => !v)}
               className="absolute right-3 top-3 flex items-center gap-1.5 rounded-full bg-ink px-3 py-1.5 text-xs font-bold text-white shadow-card transition hover:bg-ink/85"

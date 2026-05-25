@@ -1,0 +1,387 @@
+{
+  "psdSize": [
+    3000,
+    2000
+  ],
+  "layers": {
+    "background_color": {
+      "type": "pixel",
+      "file": "background_color.png",
+      "left": 0,
+      "top": 0,
+      "width": 3000,
+      "height": 2000,
+      "blendMode": "normal",
+      "opacity": 1,
+      "hidden": false
+    },
+    "back_design": {
+      "type": "group",
+      "blendMode": "pass through",
+      "opacity": 1,
+      "hidden": false,
+      "children": [
+        "back_design__back_base",
+        "back_design__r_hand",
+        "back_design__l_hand",
+        "back_design__collar",
+        "back_design__back_design",
+        "back_design__effect"
+      ]
+    },
+    "back_design__back_base": {
+      "type": "pixel",
+      "file": "back_design__back_base.png",
+      "left": 1524,
+      "top": 253,
+      "width": 1182,
+      "height": 1463,
+      "blendMode": "normal",
+      "opacity": 1,
+      "hidden": false
+    },
+    "back_design__r_hand": {
+      "type": "group",
+      "blendMode": "pass through",
+      "opacity": 1,
+      "hidden": false,
+      "children": [
+        "back_design__r_hand__r_stripe",
+        "back_design__r_hand__r_hand"
+      ]
+    },
+    "back_design__r_hand__r_stripe": {
+      "type": "pixel",
+      "file": "back_design__r_hand__r_stripe.png",
+      "left": 2491,
+      "top": 717,
+      "width": 215,
+      "height": 122,
+      "blendMode": "multiply",
+      "opacity": 1,
+      "hidden": false
+    },
+    "back_design__r_hand__r_hand": {
+      "type": "pixel",
+      "file": "back_design__r_hand__r_hand.png",
+      "left": 2361,
+      "top": 259,
+      "width": 536,
+      "height": 618,
+      "blendMode": "multiply",
+      "opacity": 1,
+      "hidden": false
+    },
+    "back_design__l_hand": {
+      "type": "group",
+      "blendMode": "pass through",
+      "opacity": 1,
+      "hidden": false,
+      "children": [
+        "back_design__l_hand__l_stripe",
+        "back_design__l_hand__l_hand"
+      ]
+    },
+    "back_design__l_hand__l_stripe": {
+      "type": "pixel",
+      "file": "back_design__l_hand__l_stripe.png",
+      "left": 1524,
+      "top": 701,
+      "width": 220,
+      "height": 135,
+      "blendMode": "multiply",
+      "opacity": 1,
+      "hidden": false
+    },
+    "back_design__l_hand__l_hand": {
+      "type": "pixel",
+      "file": "back_design__l_hand__l_hand.png",
+      "left": 1353,
+      "top": 274,
+      "width": 531,
+      "height": 597,
+      "blendMode": "multiply",
+      "opacity": 1,
+      "hidden": false
+    },
+    "back_design__collar": {
+      "type": "pixel",
+      "file": "back_design__collar.png",
+      "left": 1922,
+      "top": 225,
+      "width": 400,
+      "height": 92,
+      "blendMode": "multiply",
+      "opacity": 1,
+      "hidden": false
+    },
+    "back_design__back_design": {
+      "type": "pixel",
+      "file": "back_design__back_design.png",
+      "left": 1662,
+      "top": 273,
+      "width": 902,
+      "height": 1446,
+      "blendMode": "multiply",
+      "opacity": 1,
+      "hidden": false
+    },
+    "back_design__effect": {
+      "type": "group",
+      "blendMode": "pass through",
+      "opacity": 1,
+      "hidden": false,
+      "children": [
+        "back_design__effect__effect",
+        "back_design__effect__effect_",
+        "back_design__effect__brightness_contrast_1_copy"
+      ]
+    },
+    "back_design__effect__effect": {
+      "type": "pixel",
+      "file": "back_design__effect__effect.png",
+      "left": 1524,
+      "top": 253,
+      "width": 1182,
+      "height": 1463,
+      "blendMode": "linear burn",
+      "opacity": 0.6588235294117647,
+      "hidden": false
+    },
+    "back_design__effect__effect_": {
+      "type": "pixel",
+      "file": "back_design__effect__effect_.png",
+      "left": 1524,
+      "top": 253,
+      "width": 1182,
+      "height": 1463,
+      "blendMode": "linear dodge",
+      "opacity": 0.6588235294117647,
+      "hidden": false
+    },
+    "front_design": {
+      "type": "group",
+      "blendMode": "pass through",
+      "opacity": 1,
+      "hidden": false,
+      "children": [
+        "front_design__front_base",
+        "front_design__right_hand",
+        "front_design__left_hand",
+        "front_design__sholder_r",
+        "front_design__sholder_l",
+        "front_design__inside",
+        "front_design__front_design",
+        "front_design__collar",
+        "front_design__effect"
+      ]
+    },
+    "front_design__front_base": {
+      "type": "pixel",
+      "file": "front_design__front_base.png",
+      "left": 367,
+      "top": 268,
+      "width": 1142,
+      "height": 1451,
+      "blendMode": "normal",
+      "opacity": 1,
+      "hidden": false
+    },
+    "front_design__right_hand": {
+      "type": "group",
+      "blendMode": "pass through",
+      "opacity": 1,
+      "hidden": false,
+      "children": [
+        "front_design__right_hand__r_stripe",
+        "front_design__right_hand__r_hand_"
+      ]
+    },
+    "front_design__right_hand__r_stripe": {
+      "type": "pixel",
+      "file": "front_design__right_hand__r_stripe.png",
+      "left": 367,
+      "top": 730,
+      "width": 205,
+      "height": 123,
+      "blendMode": "multiply",
+      "opacity": 1,
+      "hidden": false
+    },
+    "front_design__right_hand__r_hand_": {
+      "type": "pixel",
+      "file": "front_design__right_hand__r_hand_.png",
+      "left": 183,
+      "top": 274,
+      "width": 463,
+      "height": 593,
+      "blendMode": "multiply",
+      "opacity": 1,
+      "hidden": false
+    },
+    "front_design__left_hand": {
+      "type": "group",
+      "blendMode": "pass through",
+      "opacity": 1,
+      "hidden": false,
+      "children": [
+        "front_design__left_hand__l_strip",
+        "front_design__left_hand__l_hand"
+      ]
+    },
+    "front_design__left_hand__l_strip": {
+      "type": "pixel",
+      "file": "front_design__left_hand__l_strip.png",
+      "left": 1300,
+      "top": 704,
+      "width": 208,
+      "height": 153,
+      "blendMode": "multiply",
+      "opacity": 1,
+      "hidden": false
+    },
+    "front_design__left_hand__l_hand": {
+      "type": "pixel",
+      "file": "front_design__left_hand__l_hand.png",
+      "left": 1187,
+      "top": 297,
+      "width": 460,
+      "height": 575,
+      "blendMode": "multiply",
+      "opacity": 1,
+      "hidden": false
+    },
+    "front_design__sholder_r": {
+      "type": "pixel",
+      "file": "front_design__sholder_r.png",
+      "left": 504,
+      "top": 276,
+      "width": 318,
+      "height": 192,
+      "blendMode": "multiply",
+      "opacity": 1,
+      "hidden": false
+    },
+    "front_design__sholder_l": {
+      "type": "pixel",
+      "file": "front_design__sholder_l.png",
+      "left": 1047,
+      "top": 276,
+      "width": 318,
+      "height": 192,
+      "blendMode": "multiply",
+      "opacity": 1,
+      "hidden": false
+    },
+    "front_design__inside": {
+      "type": "pixel",
+      "file": "front_design__inside.png",
+      "left": 802,
+      "top": 299,
+      "width": 267,
+      "height": 133,
+      "blendMode": "multiply",
+      "opacity": 1,
+      "hidden": false
+    },
+    "front_design__front_design": {
+      "type": "pixel",
+      "file": "front_design__front_design.png",
+      "left": 487,
+      "top": 342,
+      "width": 878,
+      "height": 1434,
+      "blendMode": "multiply",
+      "opacity": 1,
+      "hidden": false
+    },
+    "front_design__collar": {
+      "type": "group",
+      "blendMode": "pass through",
+      "opacity": 1,
+      "hidden": false,
+      "children": [
+        "front_design__collar__collar_left",
+        "front_design__collar__collar_right",
+        "front_design__collar__collar"
+      ]
+    },
+    "front_design__collar__collar_left": {
+      "type": "pixel",
+      "file": "front_design__collar__collar_left.png",
+      "left": 939,
+      "top": 261,
+      "width": 179,
+      "height": 218,
+      "blendMode": "multiply",
+      "opacity": 1,
+      "hidden": false
+    },
+    "front_design__collar__collar_right": {
+      "type": "pixel",
+      "file": "front_design__collar__collar_right.png",
+      "left": 756,
+      "top": 252,
+      "width": 186,
+      "height": 230,
+      "blendMode": "multiply",
+      "opacity": 1,
+      "hidden": false
+    },
+    "front_design__collar__collar": {
+      "type": "pixel",
+      "file": "front_design__collar__collar.png",
+      "left": 793,
+      "top": 263,
+      "width": 290,
+      "height": 61,
+      "blendMode": "multiply",
+      "opacity": 1,
+      "hidden": false
+    },
+    "front_design__effect": {
+      "type": "group",
+      "blendMode": "pass through",
+      "opacity": 1,
+      "hidden": false,
+      "children": [
+        "front_design__effect__baise_copy",
+        "front_design__effect__baise_copy_2",
+        "front_design__effect__brightness_contrast_1"
+      ]
+    },
+    "front_design__effect__baise_copy": {
+      "type": "pixel",
+      "file": "front_design__effect__baise_copy.png",
+      "left": 367,
+      "top": 268,
+      "width": 1142,
+      "height": 1451,
+      "blendMode": "linear burn",
+      "opacity": 0.6588235294117647,
+      "hidden": false
+    },
+    "front_design__effect__baise_copy_2": {
+      "type": "pixel",
+      "file": "front_design__effect__baise_copy_2.png",
+      "left": 367,
+      "top": 268,
+      "width": 1142,
+      "height": 1451,
+      "blendMode": "linear dodge",
+      "opacity": 1,
+      "hidden": false
+    },
+    "delete_this": {
+      "type": "pixel",
+      "file": "delete_this.png",
+      "left": 0,
+      "top": 0,
+      "width": 3000,
+      "height": 2000,
+      "blendMode": "normal",
+      "opacity": 1,
+      "hidden": false
+    }
+  }
+}

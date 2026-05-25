@@ -5,13 +5,13 @@ import { Eye, EyeOff } from "lucide-react";
 import { useJerseyStore } from "@/lib/store";
 import { ZONE_LABELS, type ZoneId } from "@/types/jersey";
 
-// Versi 2D — semua zona berfungsi penuh & langsung tampil di preview.
+// Zona yang berfungsi di PSD klien. "backPanel" tidak punya layer di PSD jadi
+// di-sembunyikan dari UI (state-nya tetap ada untuk forward-compat).
 const ZONE_ORDER: ZoneId[] = [
   "body",
   "sleeves",
   "collar",
   "frontPanel",
-  "backPanel",
   "stitches",
 ];
 
