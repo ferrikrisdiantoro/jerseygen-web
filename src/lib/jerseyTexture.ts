@@ -4,21 +4,25 @@ export const JERSEY_W = 400;
 export const JERSEY_H = 480;
 const SCALE = 2.5;
 
-// Front silhouette has a V-neck dip. Back is flat/higher (like a real jersey).
+// Realistic football-jersey silhouette: rounded shoulders, deeper V-neck on
+// front, flat collar band on back, tapered body (wider at chest, narrower at
+// hem), sleeves angled outward.
 export const JERSEY_PATH =
-  "M70 80 L150 50 L170 70 Q200 90 230 70 L250 50 L330 80 L370 160 L320 180 " +
-  "L320 430 Q320 450 300 450 L100 450 Q80 450 80 430 L80 180 L30 160 Z";
+  "M60 80 Q90 55 135 50 L165 75 Q200 130 235 75 L265 50 Q310 55 340 80 " +
+  "L375 170 L305 195 Q315 290 295 432 Q295 452 280 452 L120 452 " +
+  "Q105 452 105 432 Q85 290 95 195 L25 170 Z";
 
 export const JERSEY_PATH_BACK =
-  "M70 80 L150 50 L172 58 L228 58 L250 50 L330 80 L370 160 L320 180 " +
-  "L320 430 Q320 450 300 450 L100 450 Q80 450 80 430 L80 180 L30 160 Z";
+  "M60 80 Q90 55 135 50 L168 62 L232 62 L265 50 Q310 55 340 80 " +
+  "L375 170 L305 195 Q315 290 295 432 Q295 452 280 452 L120 452 " +
+  "Q105 452 105 432 Q85 290 95 195 L25 170 Z";
 
-const SLEEVE_LEFT = "M70 80 L30 160 L80 180 L110 110 Z";
-const SLEEVE_RIGHT = "M330 80 L370 160 L320 180 L290 110 Z";
-const COLLAR_FRONT = "M170 70 Q200 90 230 70 L220 95 Q200 108 180 95 Z";
-const COLLAR_BACK = "M172 58 L228 58 L226 72 L174 72 Z";
-// Small label tag at the back of the neck — visual cue this is the back.
-const BACK_TAG = "M188 60 L212 60 L210 70 L190 70 Z";
+const SLEEVE_LEFT = "M60 80 Q90 55 135 50 L95 195 L25 170 Z";
+const SLEEVE_RIGHT = "M340 80 Q310 55 265 50 L305 195 L375 170 Z";
+const COLLAR_FRONT = "M165 75 Q200 130 235 75 L227 92 Q200 142 173 92 Z";
+const COLLAR_BACK = "M168 62 L232 62 L228 78 L172 78 Z";
+// Small label tag at back of neck — visual cue this is the back.
+const BACK_TAG = "M190 62 L210 62 L208 73 L192 73 Z";
 
 export interface TextureAssets {
   patternImg?: HTMLImageElement | null;
@@ -229,10 +233,29 @@ export async function drawJerseyTexture(
   // pattern overlay
   drawPattern(ctx, state, assets);
 
-  // cuff accent stripes (using frontPanel color)
+  // cuff accent stripes — pas di bawah sleeve, sebagai band keliling lengan
   ctx.fillStyle = accentColor;
-  ctx.fillRect(35, 152, 55, 12);
-  ctx.fillRect(310, 152, 55, 12);
+  ctx.fillRect(30, 162, 65, 14);
+  ctx.fillRect(305, 162, 65, 14);
+
+  // subtle shoulder seam lines (where sleeve meets body) for realism
+  ctx.save();
+  ctx.strokeStyle = shade(sleeveColor, -22);
+  ctx.lineWidth = 1.6;
+  ctx.beginPath();
+  ctx.moveTo(135, 50);
+  ctx.lineTo(95, 195);
+  ctx.moveTo(265, 50);
+  ctx.lineTo(305, 195);
+  ctx.stroke();
+  // hem stitching line for realism
+  ctx.strokeStyle = shade(bodyColor, -22);
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(108, 438);
+  ctx.lineTo(292, 438);
+  ctx.stroke();
+  ctx.restore();
 
   // collar — V-neck on front, flat band on back
   if (zones.collar.visible) {
