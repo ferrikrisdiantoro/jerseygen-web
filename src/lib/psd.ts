@@ -124,6 +124,93 @@ function tintLayer(
   return c;
 }
 
+/**
+ * Draw the pattern (stripes / hoops / etc.) onto the main canvas, masked to the
+ * body layer's shape, so it only appears on the jersey body.
+ */
+function drawBodyPattern(
+  ctx: CanvasRenderingContext2D,
+  state: JerseyState,
+  bodyImg: HTMLImageElement,
+  patternImg: HTMLImageElement | null,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+) {
+  if (state.patternType === "solid") return;
+
+  const pat = document.createElement("canvas");
+  pat.width = Math.max(1, Math.round(w));
+  pat.height = Math.max(1, Math.round(h));
+  const pctx = pat.getContext("2d")!;
+  pctx.globalAlpha = state.patternOpacity;
+  pctx.fillStyle = state.patternColor;
+  pctx.strokeStyle = state.patternColor;
+  const s = state.patternScale || 1;
+  const W = pat.width;
+  const H = pat.height;
+
+  if (state.patternType === "stripes") {
+    const sw = W / 9 / s;
+    for (let px = -sw; px < W + sw; px += sw * 2) pctx.fillRect(px, 0, sw, H);
+  } else if (state.patternType === "hoops") {
+    const sh = H / 12 / s;
+    for (let py = -sh; py < H + sh; py += sh * 2) pctx.fillRect(0, py, W, sh);
+  } else if (state.patternType === "halves") {
+    pctx.fillRect(0, 0, W / 2, H);
+  } else if (state.patternType === "sash") {
+    pctx.lineWidth = W / 5 / s;
+    pctx.beginPath();
+    pctx.moveTo(-W * 0.1, H);
+    pctx.lineTo(W * 1.1, -H * 0.1);
+    pctx.stroke();
+  } else if (state.patternType === "chevron") {
+    const step = H / 8 / s;
+    pctx.lineWidth = H / 36 / s;
+    for (let py = -step; py < H + step * 2; py += step) {
+      pctx.beginPath();
+      pctx.moveTo(0, py);
+      pctx.lineTo(W / 2, py + step / 2);
+      pctx.lineTo(W, py);
+      pctx.stroke();
+    }
+  } else if (state.patternType === "grid") {
+    const g = W / 9 / s;
+    pctx.lineWidth = W / 110 / s;
+    for (let px = 0; px < W; px += g) {
+      pctx.beginPath();
+      pctx.moveTo(px, 0);
+      pctx.lineTo(px, H);
+      pctx.stroke();
+    }
+    for (let py = 0; py < H; py += g) {
+      pctx.beginPath();
+      pctx.moveTo(0, py);
+      pctx.lineTo(W, py);
+      pctx.stroke();
+    }
+  } else if (state.patternType === "custom" && patternImg) {
+    const size = Math.max(40, W / 5 / s);
+    const tile = document.createElement("canvas");
+    tile.width = size;
+    tile.height = size;
+    tile.getContext("2d")!.drawImage(patternImg, 0, 0, size, size);
+    const fill = pctx.createPattern(tile, "repeat");
+    if (fill) {
+      pctx.fillStyle = fill;
+      pctx.fillRect(0, 0, W, H);
+    }
+  }
+
+  pctx.globalAlpha = 1;
+  // mask the pattern to the body shape
+  pctx.globalCompositeOperation = "destination-in";
+  pctx.drawImage(bodyImg, 0, 0, W, H);
+
+  ctx.drawImage(pat, x, y);
+}
+
 async function loadUserImage(dataUrl: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -213,6 +300,16 @@ export async function compositePsdJersey(
     }),
   );
 
+  // Preload custom pattern image if needed.
+  let patternImg: HTMLImageElement | null = null;
+  if (state.patternType === "custom" && state.patternDataUrl) {
+    try {
+      patternImg = await loadUserImage(state.patternDataUrl);
+    } catch {
+      patternImg = null;
+    }
+  }
+
   for (const lc of layers) {
     const entry = manifest.layers[lc.key];
     if (!entry || !entry.file || entry.width === undefined) continue;
@@ -230,6 +327,10 @@ export async function compositePsdJersey(
       const tinted = tintLayer(img, zone.color, w, h);
       ctx.globalCompositeOperation = "source-over";
       ctx.drawImage(tinted, x, y);
+      // overlay pattern on the body, masked to its shape
+      if (lc.zone === "body") {
+        drawBodyPattern(ctx, state, img, patternImg, x, y, w, h);
+      }
     } else {
       ctx.globalCompositeOperation = lc.blend ?? "source-over";
       ctx.drawImage(img, x, y, w, h);
