@@ -98,7 +98,13 @@ function loadImage(file: string): Promise<HTMLImageElement> {
   });
 }
 
-/** Tint a grayscale layer with a zone color (multiply + alpha mask). */
+/**
+ * Tint a layer with a zone color, using only the layer's ALPHA channel as a
+ * shape mask. This avoids weird color mixing when the source PSD layer has
+ * colored (not grayscale) pixel content — picks ONLY the shape, fills with
+ * chosen color. Realistic shading comes from the linear-burn / linear-dodge
+ * Effect layers composited on top.
+ */
 function tintLayer(
   img: HTMLImageElement,
   color: string,
@@ -112,10 +118,7 @@ function tintLayer(
   // 1. fill with target color
   ctx.fillStyle = color;
   ctx.fillRect(0, 0, width, height);
-  // 2. multiply with layer pixels (darkens based on grayscale)
-  ctx.globalCompositeOperation = "multiply";
-  ctx.drawImage(img, 0, 0, width, height);
-  // 3. mask to the layer's alpha (so we don't bleed outside its shape)
+  // 2. mask to layer's alpha shape
   ctx.globalCompositeOperation = "destination-in";
   ctx.drawImage(img, 0, 0, width, height);
   return c;

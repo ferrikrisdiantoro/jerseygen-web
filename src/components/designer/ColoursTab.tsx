@@ -81,13 +81,21 @@ function ZoneRow({
         )}
       >
         {onToggle && (
-          <button
-            type="button"
+          <span
+            role="button"
+            tabIndex={0}
             onClick={(e) => {
               e.preventDefault();
+              e.stopPropagation();
               onToggle();
             }}
-            className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-ink-mute hover:bg-line/60"
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onToggle();
+              }
+            }}
+            className="grid h-7 w-7 shrink-0 cursor-pointer place-items-center rounded-md text-ink-mute hover:bg-line/60"
             aria-label={visible ? "Sembunyikan" : "Tampilkan"}
             title={visible ? "Klik untuk sembunyikan" : "Klik untuk tampilkan"}
           >
@@ -96,7 +104,7 @@ function ZoneRow({
             ) : (
               <EyeOff className="h-4 w-4" />
             )}
-          </button>
+          </span>
         )}
         <span
           className="h-7 w-7 shrink-0 rounded-md border border-line"
