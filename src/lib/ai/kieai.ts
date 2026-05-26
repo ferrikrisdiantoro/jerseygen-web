@@ -75,8 +75,12 @@ export const kieaiProvider: AIProvider = {
     const createJson = (await createRes.json()) as KieEnvelope<CreateTaskData>;
 
     if (createJson.code !== 200) {
+      const hint =
+        createJson.code === 422 && /model/i.test(createJson.msg || "")
+          ? ` (cek model di Setelan → coba 'google/nano-banana' atau 'google/nano-banana-2')`
+          : "";
       throw new Error(
-        `KieAI menolak request (code ${createJson.code}): ${createJson.msg || "no message"}`,
+        `KieAI menolak request (code ${createJson.code}): ${createJson.msg || "no message"}${hint}`,
       );
     }
 
