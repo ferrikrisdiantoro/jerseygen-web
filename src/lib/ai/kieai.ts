@@ -1,18 +1,39 @@
 import type { AIProvider, GenerateInput, ProviderOptions } from "./types";
 
-// KieAI Playground API — image edit with reference image(s).
-// Docs: https://docs.kie.ai/
+// KIE.AI — image edit with reference image(s).
+// Docs: https://docs.kie.ai/market/google/nano-banana-edit
 //
-// Flow:
-// 1) POST /api/v1/playground/createTask  → { taskId }
-// 2) Poll GET /api/v1/playground/recordInfo?taskId=...  until status === "success"
-// 3) Read result image URL from the response.
+// Async pattern:
+//   1) POST /api/v1/jobs/createTask  → { code, msg, data: { taskId } }
+//   2) Poll GET /api/v1/jobs/recordInfo?taskId=...
+//        → { code, data: { state, resultJson, failMsg } }
+//      state: "waiting" | "queuing" | "generating" | "success" | "fail"
+//      resultJson is a STRING containing JSON { resultUrls: [...] }
 
 const BASE_URL = "https://api.kie.ai";
-const POLL_INTERVAL_MS = 2500;
-const MAX_POLL_MS = 120_000;
+const POLL_INTERVAL_MS = 3000;
+const MAX_POLL_MS = 180_000;
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+interface KieEnvelope<T> {
+  code: number;
+  msg?: string;
+  data?: T;
+}
+
+interface CreateTaskData {
+  taskId?: string;
+}
+
+interface RecordInfoData {
+  taskId?: string;
+  state?: string;
+  resultJson?: string;
+  failCode?: number;
+  failMsg?: string;
+  progress?: number;
+}
 
 export const kieaiProvider: AIProvider = {
   name: "kieai",
@@ -27,15 +48,22 @@ export const kieaiProvider: AIProvider = {
     const refs = [jerseyImageDataUrl];
     if (userPhotoDataUrl) refs.push(userPhotoDataUrl);
 
-    const createRes = await fetch(`${BASE_URL}/api/v1/playground/createTask`, {
+    const headers = {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    };
+
+    // ---- 1. create task ----
+    const createRes = await fetch(`${BASE_URL}/api/v1/jobs/createTask`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
+      headers,
       body: JSON.stringify({
         model,
-        input: { prompt, image_urls: refs, output_format: "png" },
+        input: {
+          prompt,
+          image_urls: refs,
+          output_format: "png",
+        },
       }),
     });
 
@@ -43,40 +71,61 @@ export const kieaiProvider: AIProvider = {
       const text = await createRes.text();
       throw new Error(`KieAI createTask gagal: ${createRes.status} ${text}`);
     }
-    const createJson = (await createRes.json()) as {
-      data?: { taskId?: string };
-      taskId?: string;
-    };
-    const taskId = createJson.data?.taskId || createJson.taskId;
-    if (!taskId) throw new Error("KieAI tidak mengembalikan taskId");
 
+    const createJson = (await createRes.json()) as KieEnvelope<CreateTaskData>;
+
+    if (createJson.code !== 200) {
+      throw new Error(
+        `KieAI menolak request (code ${createJson.code}): ${createJson.msg || "no message"}`,
+      );
+    }
+
+    const taskId = createJson.data?.taskId;
+    if (!taskId) {
+      throw new Error(
+        `KieAI tidak mengembalikan taskId. Response: ${JSON.stringify(createJson).slice(0, 300)}`,
+      );
+    }
+
+    // ---- 2. poll ----
     const start = Date.now();
     while (Date.now() - start < MAX_POLL_MS) {
       await sleep(POLL_INTERVAL_MS);
       const pollRes = await fetch(
-        `${BASE_URL}/api/v1/playground/recordInfo?taskId=${encodeURIComponent(taskId)}`,
+        `${BASE_URL}/api/v1/jobs/recordInfo?taskId=${encodeURIComponent(taskId)}`,
         { headers: { Authorization: `Bearer ${apiKey}` } },
       );
       if (!pollRes.ok) continue;
-      const pollJson = (await pollRes.json()) as {
-        data?: {
-          status?: string;
-          state?: string;
-          resultUrls?: string[];
-          resultJson?: { resultUrls?: string[] };
-        };
-      };
-      const data = pollJson.data;
-      const status = (data?.status || data?.state || "").toLowerCase();
-      if (status === "success" || status === "succeeded") {
-        const url = data?.resultUrls?.[0] || data?.resultJson?.resultUrls?.[0];
+      const pollJson = (await pollRes.json()) as KieEnvelope<RecordInfoData>;
+      if (pollJson.code !== 200 || !pollJson.data) continue;
+
+      const state = (pollJson.data.state || "").toLowerCase();
+
+      if (state === "success") {
+        // resultJson is a JSON STRING — parse it
+        let resultUrls: string[] = [];
+        if (pollJson.data.resultJson) {
+          try {
+            const rj = JSON.parse(pollJson.data.resultJson) as {
+              resultUrls?: string[];
+            };
+            resultUrls = rj.resultUrls || [];
+          } catch {
+            // fall through
+          }
+        }
+        const url = resultUrls[0];
         if (!url) throw new Error("KieAI sukses tapi tidak ada result URL");
         return { imageUrl: url };
       }
-      if (status === "failed" || status === "fail") {
-        throw new Error("KieAI generate gagal");
+
+      if (state === "fail" || state === "failed") {
+        throw new Error(
+          `KieAI generate gagal: ${pollJson.data.failMsg || "unknown error"}`,
+        );
       }
+      // else: keep polling ("waiting" / "queuing" / "generating")
     }
-    throw new Error("Timeout menunggu hasil KieAI");
+    throw new Error("Timeout menunggu hasil KieAI (>3 menit)");
   },
 };
