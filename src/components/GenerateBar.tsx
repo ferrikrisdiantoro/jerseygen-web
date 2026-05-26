@@ -3,7 +3,7 @@
 import { Loader2, Sparkles, Wand2 } from "lucide-react";
 import { useState } from "react";
 import { extractJerseyState, useJerseyStore } from "@/lib/store";
-import { exportFrontPng } from "@/lib/jerseyTexture";
+import { exportPsdFrontPng } from "@/lib/psd";
 import { getSettings } from "@/lib/settings";
 import { useUiStore } from "@/lib/ui";
 import { ResultModal } from "./ResultModal";
@@ -34,7 +34,7 @@ export function GenerateBar() {
     try {
       setBusy(true);
       const jersey = extractJerseyState(store);
-      const previewDataUrl = await exportFrontPng(jersey);
+      const previewDataUrl = await exportPsdFrontPng(jersey);
       const settings = getSettings();
       const res = await fetch("/api/generate", {
         method: "POST",

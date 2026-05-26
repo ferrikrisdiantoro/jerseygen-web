@@ -482,3 +482,65 @@ export async function renderJerseyToCanvas(
   await compositePsdJersey(c, side, state, scale);
   return c;
 }
+
+/**
+ * Render the FRONT side at high resolution as a PNG data URL, on a WHITE
+ * background. Used as the realistic reference image for AI generate — gives
+ * the AI a photo-quality jersey to put on the person, instead of the old
+ * flat 2D illustration.
+ */
+export async function exportPsdFrontPng(
+  state: JerseyState,
+  scale = 0.8,
+): Promise<string> {
+  const layer = await renderJerseyToCanvas("front", state, scale);
+  // composite onto white background for cleaner AI input
+  const c = document.createElement("canvas");
+  c.width = layer.width;
+  c.height = layer.height;
+  const ctx = c.getContext("2d")!;
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, c.width, c.height);
+  ctx.drawImage(layer, 0, 0);
+  return c.toDataURL("image/png");
+}
+
+/** Two-panel design sheet (front + back) for download / print. */
+export async function exportPsdDesignSheet(
+  state: JerseyState,
+): Promise<string> {
+  const front = await renderJerseyToCanvas("front", state, 0.6);
+  const back = await renderJerseyToCanvas("back", state, 0.6);
+
+  const pad = 40;
+  const sheet = document.createElement("canvas");
+  sheet.width = front.width + back.width + pad * 3;
+  sheet.height = Math.max(front.height, back.height) + pad * 2 + 60;
+  const ctx = sheet.getContext("2d")!;
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, sheet.width, sheet.height);
+  ctx.drawImage(front, pad, pad + 60);
+  ctx.drawImage(back, pad * 2 + front.width, pad + 60);
+
+  ctx.fillStyle = "#0f172a";
+  ctx.font = "700 34px Arial, sans-serif";
+  ctx.fillText("JerseyGen — Design Sheet", pad, 52);
+  ctx.font = "500 26px Arial, sans-serif";
+  ctx.fillStyle = "#64748b";
+  ctx.fillText("DEPAN", pad, pad + 48);
+  ctx.fillText("BELAKANG", pad * 2 + front.width, pad + 48);
+  return sheet.toDataURL("image/png");
+}
+
+/** Small JPEG thumbnail for saved-jersey list. */
+export async function exportPsdThumbnail(state: JerseyState): Promise<string> {
+  const layer = await renderJerseyToCanvas("front", state, 0.25);
+  const thumb = document.createElement("canvas");
+  thumb.width = 200;
+  thumb.height = Math.round((200 * layer.height) / layer.width);
+  const ctx = thumb.getContext("2d")!;
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, thumb.width, thumb.height);
+  ctx.drawImage(layer, 0, 0, thumb.width, thumb.height);
+  return thumb.toDataURL("image/jpeg", 0.7);
+}

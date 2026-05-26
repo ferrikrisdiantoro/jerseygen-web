@@ -3,7 +3,7 @@
 import { Download, FileImage, Loader2, Printer } from "lucide-react";
 import { useState } from "react";
 import { extractJerseyState, useJerseyStore } from "@/lib/store";
-import { buildDesignSheet } from "@/lib/jerseyTexture";
+import { exportPsdDesignSheet as buildDesignSheet } from "@/lib/psd";
 import { Panel } from "./ui/Panel";
 
 export function ExportBar() {

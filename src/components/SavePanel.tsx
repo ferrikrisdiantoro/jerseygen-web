@@ -3,7 +3,7 @@
 import { BookmarkPlus, FolderOpen, Loader2, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { extractJerseyState, useJerseyStore } from "@/lib/store";
-import { buildThumbnail } from "@/lib/jerseyTexture";
+import { exportPsdThumbnail as buildThumbnail } from "@/lib/psd";
 import {
   deleteSavedJersey,
   listSavedJerseys,

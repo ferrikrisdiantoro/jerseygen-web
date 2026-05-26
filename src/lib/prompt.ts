@@ -74,12 +74,14 @@ export function buildJerseyPrompt(jersey: JerseyState): string {
     : "The model is a generic young athletic man with a neutral appearance.";
 
   return [
-    `Photorealistic photo of a person wearing the EXACT custom football/soccer jersey shown in the FIRST reference image.`,
+    `Create a REAL photograph of a real human person wearing the EXACT custom football/soccer jersey shown in the FIRST reference image.`,
+    `The output MUST be a candid photograph of a person — NOT an illustration, NOT a flat template, NOT a mockup, NOT a clip-art jersey on a blank background.`,
     `Recreate the jersey faithfully as a real worn jersey: ${patternDesc}, ${sleeves} sleeves, and ${accent} trim and cuff stripes.`,
     detailSentence,
     `STRICT RULE: Do NOT invent, add, or change anything on the jersey. Do NOT add any real-world brand or competition marks — no Nike, Adidas, Puma, Emirates, Fly Emirates, Premier League, La Liga, club crests, or any sponsor/logo that is not in the reference. Match the reference jersey 1:1.`,
     subject,
-    `Jersey fit: ${fit}. Pose: standing, relaxed three-quarter body shot, soft natural daylight, blurred outdoor urban background. Style: high-quality DSLR photograph, sharp focus, ultra-detailed fabric texture, realistic.`,
-    `Avoid: distorted or warped text, extra limbs, invented sponsors, brand logos, club badges, plastic-looking skin.`,
+    `Jersey fit: ${fit}. Pose: standing, relaxed three-quarter body shot, soft natural daylight, blurred outdoor urban background.`,
+    `Style: high-quality DSLR photograph, sharp focus, ultra-detailed fabric texture, realistic skin, depth of field, natural shadows.`,
+    `ABSOLUTELY AVOID: stock photo watermarks (no "shutterstock", no "getty", no "your tagline here", no "your text here"), template placeholder text, design template format, flat 2D illustration, distorted or warped text, extra limbs, invented sponsors, brand logos, club badges, plastic-looking skin, clip-art style.`,
   ].join(" ");
 }
