@@ -15,6 +15,36 @@ interface KeyError {
   message: string;
 }
 
+/**
+ * Downsample a data-URL image so we don't send 5-10 MB photos to the AI provider
+ * (KieAI throws server-500 on huge payloads). Re-encodes as JPEG.
+ */
+async function downsampleDataUrl(
+  dataUrl: string,
+  maxWidth = 1024,
+  quality = 0.88,
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      if (img.width <= maxWidth) {
+        resolve(dataUrl);
+        return;
+      }
+      const ratio = maxWidth / img.width;
+      const c = document.createElement("canvas");
+      c.width = maxWidth;
+      c.height = Math.round(img.height * ratio);
+      const ctx = c.getContext("2d");
+      if (!ctx) return reject(new Error("Canvas tidak tersedia"));
+      ctx.drawImage(img, 0, 0, c.width, c.height);
+      resolve(c.toDataURL("image/jpeg", quality));
+    };
+    img.onerror = () => reject(new Error("Gagal membaca foto"));
+    img.src = dataUrl;
+  });
+}
+
 export function GenerateBar() {
   const store = useJerseyStore();
   const openSettings = useUiStore((s) => s.openSettings);
@@ -35,12 +65,22 @@ export function GenerateBar() {
       setBusy(true);
       const jersey = extractJerseyState(store);
       const previewDataUrl = await exportPsdFrontPng(jersey);
+      // shrink the face photo so total POST payload stays under a few MB
+      const jerseyForApi = jersey.userPhotoDataUrl
+        ? {
+            ...jersey,
+            userPhotoDataUrl: await downsampleDataUrl(
+              jersey.userPhotoDataUrl,
+              1024,
+            ),
+          }
+        : jersey;
       const settings = getSettings();
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          jersey,
+          jersey: jerseyForApi,
           jerseyPreviewDataUrl: previewDataUrl,
           provider: settings.provider || undefined,
           apiKey: settings.apiKey || undefined,

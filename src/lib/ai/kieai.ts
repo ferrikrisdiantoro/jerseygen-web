@@ -53,36 +53,58 @@ export const kieaiProvider: AIProvider = {
       Authorization: `Bearer ${apiKey}`,
     };
 
-    // ---- 1. create task ----
-    const createRes = await fetch(`${BASE_URL}/api/v1/jobs/createTask`, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({
-        model,
-        input: {
-          prompt,
-          image_urls: refs,
-          output_format: "png",
-        },
-      }),
+    // ---- 1. create task (with one retry on 5xx — KieAI server hiccups) ----
+    const requestBody = JSON.stringify({
+      model,
+      input: {
+        prompt,
+        image_urls: refs,
+        output_format: "png",
+      },
     });
 
-    if (!createRes.ok) {
-      const text = await createRes.text();
-      throw new Error(`KieAI createTask gagal: ${createRes.status} ${text}`);
-    }
+    let createJson: KieEnvelope<CreateTaskData> | null = null;
+    let lastError = "";
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      const createRes = await fetch(`${BASE_URL}/api/v1/jobs/createTask`, {
+        method: "POST",
+        headers,
+        body: requestBody,
+      });
 
-    const createJson = (await createRes.json()) as KieEnvelope<CreateTaskData>;
+      if (!createRes.ok) {
+        lastError = `HTTP ${createRes.status} ${await createRes.text()}`;
+        if (createRes.status >= 500 && attempt === 1) {
+          await sleep(2000);
+          continue;
+        }
+        throw new Error(`KieAI createTask gagal: ${lastError}`);
+      }
 
-    if (createJson.code !== 200) {
+      createJson = (await createRes.json()) as KieEnvelope<CreateTaskData>;
+
+      if (createJson.code === 200) break;
+
+      // KieAI envelope error (code 4xx/5xx in body)
+      if (createJson.code >= 500 && attempt === 1) {
+        lastError = `code ${createJson.code}: ${createJson.msg}`;
+        await sleep(2000);
+        createJson = null;
+        continue;
+      }
+
       const hint =
         createJson.code === 422 && /model/i.test(createJson.msg || "")
-          ? ` (cek model di Setelan → coba 'google/nano-banana' atau 'google/nano-banana-2')`
-          : "";
+          ? " (cek model di Setelan → coba 'google/nano-banana-2')"
+          : createJson.code >= 500
+            ? " (server KieAI sibuk — coba lagi beberapa detik, atau ganti provider ke Freepik)"
+            : "";
       throw new Error(
         `KieAI menolak request (code ${createJson.code}): ${createJson.msg || "no message"}${hint}`,
       );
     }
+
+    if (!createJson) throw new Error(`KieAI gagal setelah retry: ${lastError}`);
 
     const taskId = createJson.data?.taskId;
     if (!taskId) {

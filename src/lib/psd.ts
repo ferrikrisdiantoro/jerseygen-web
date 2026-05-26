@@ -491,7 +491,7 @@ export async function renderJerseyToCanvas(
  */
 export async function exportPsdFrontPng(
   state: JerseyState,
-  scale = 0.8,
+  scale = 0.5,
 ): Promise<string> {
   const layer = await renderJerseyToCanvas("front", state, scale);
   // composite onto white background for cleaner AI input
@@ -502,7 +502,8 @@ export async function exportPsdFrontPng(
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, c.width, c.height);
   ctx.drawImage(layer, 0, 0);
-  return c.toDataURL("image/png");
+  // JPEG keeps file size manageable for AI providers (PNG of this can hit ~3MB).
+  return c.toDataURL("image/jpeg", 0.88);
 }
 
 /** Two-panel design sheet (front + back) for download / print. */
