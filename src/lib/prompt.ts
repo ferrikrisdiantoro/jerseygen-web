@@ -70,18 +70,20 @@ export function buildJerseyPrompt(jersey: JerseyState): string {
         : "regular athletic fit";
 
   const subject = jersey.useFace
-    ? "Keep the EXACT same face, identity, hairstyle, and skin tone as the person in the SECOND reference image — do not change their face."
-    : "The model is a generic young athletic man with a neutral appearance.";
+    ? "Keep the EXACT same face, identity, and skin tone as the person in the SECOND reference image — do not change their face. Natural everyday hairstyle, no sunglasses, no hat, no accessories on the face."
+    : "A real young athletic man with a natural everyday look, no sunglasses, no hat.";
 
   return [
-    `Create a REAL photograph of a real human person wearing the EXACT custom football/soccer jersey shown in the FIRST reference image.`,
-    `The output MUST be a candid photograph of a person — NOT an illustration, NOT a flat template, NOT a mockup, NOT a clip-art jersey on a blank background.`,
+    `Create a REAL candid photograph of a real human person wearing the EXACT custom football/soccer jersey shown in the FIRST reference image.`,
+    `The output MUST be a natural photograph of a person — NOT an illustration, NOT a flat template, NOT a mockup, NOT a clip-art jersey on a blank background.`,
     `Recreate the jersey faithfully as a real worn jersey: ${patternDesc}, ${sleeves} sleeves, and ${accent} trim and cuff stripes.`,
     detailSentence,
     `STRICT RULE: Do NOT invent, add, or change anything on the jersey. Do NOT add any real-world brand or competition marks — no Nike, Adidas, Puma, Emirates, Fly Emirates, Premier League, La Liga, club crests, or any sponsor/logo that is not in the reference. Match the reference jersey 1:1.`,
     subject,
-    `Jersey fit: ${fit}. Pose: standing, relaxed three-quarter body shot, soft natural daylight, blurred outdoor urban background.`,
-    `Style: high-quality DSLR photograph, sharp focus, ultra-detailed fabric texture, realistic skin, depth of field, natural shadows.`,
-    `ABSOLUTELY AVOID: stock photo watermarks (no "shutterstock", no "getty", no "your tagline here", no "your text here"), template placeholder text, design template format, flat 2D illustration, distorted or warped text, extra limbs, invented sponsors, brand logos, club badges, plastic-looking skin, clip-art style.`,
+    `Jersey fit: ${fit}. Pose: standing, relaxed three-quarter body shot, calm and confident expression, sleeves may be naturally rolled.`,
+    `Setting: pleasant blurred outdoor background with soft natural surroundings (greenery / urban feel).`,
+    `Lighting: strong but soft natural light from above and behind (gentle backlighting) creating a calm cinematic mood and subtle bright highlights on the hair and jersey. Slightly soften the overall image.`,
+    `Style: portrait orientation (9:16), high-quality DSLR photograph, shallow depth of field, sharp focus on the subject, realistic soft skin texture, natural shadows, 4K, cinematic.`,
+    `ABSOLUTELY AVOID: stock photo watermarks (no "shutterstock", no "getty", no "your tagline here", no "your text here"), template placeholder text, flat 2D illustration, distorted or warped text, extra limbs, invented sponsors, brand logos, club badges, plastic-looking skin, clip-art style.`,
   ].join(" ");
 }

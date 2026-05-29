@@ -26,14 +26,28 @@ interface JerseyStore extends JerseyState {
   setSponsorMode: (m: SponsorMode) => void;
   setSponsorText: (s: string) => void;
   setSponsorImage: (url: string | null) => void;
-  setFont: (f: JerseyFont) => void;
+  setSponsorScale: (n: number) => void;
+  setSponsorPosition: (pos: { x: number; y: number }) => void;
+  setSponsorColor: (c: string) => void;
+  setFont: (f: JerseyFont | string) => void;
+  setCustomFont: (url: string | null) => void;
   addCustomText: () => void;
   updateCustomText: (id: string, patch: Partial<CustomText>) => void;
   removeCustomText: (id: string) => void;
   setLogo: (url: string | null) => void;
+  setLogoScale: (scale: number) => void;
+  setLogoPosition: (pos: { x: number; y: number }) => void;
+  setApparel: (url: string | null) => void;
+  setApparelScale: (scale: number) => void;
+  setApparelPosition: (pos: { x: number; y: number }) => void;
+  setApparelColor: (color: string) => void;
   setSize: (s: JerseySize) => void;
   setUseFace: (b: boolean) => void;
   setUserPhoto: (url: string | null) => void;
+  setNamePosition: (pos: { x: number; y: number }) => void;
+  setNumberPosition: (pos: { x: number; y: number }) => void;
+  setTextStrokeType: (type: "none" | "thin" | "medium" | "thick") => void;
+  setTextStrokeColor: (color: string) => void;
   loadState: (s: unknown) => void;
   reset: () => void;
 }
@@ -60,112 +74,88 @@ export const initialJersey: JerseyState = {
   sponsorMode: "text",
   sponsorText: "",
   sponsorImageDataUrl: null,
+  sponsorScale: 1,
+  sponsorPosition: { x: 0, y: 0 },
+  sponsorColor: "#ffffff",
   font: "Inter",
+  customFontUrl: null,
   customTexts: [],
   logoDataUrl: null,
+  logoScale: 1,
+  logoPosition: { x: 0, y: 0 },
+  apparelDataUrl: null,
+  apparelScale: 1,
+  apparelPosition: { x: 0, y: 0 },
+  apparelColor: "#ffffff",
   size: "regular",
   useFace: false,
   userPhotoDataUrl: null,
+  namePosition: { x: 0, y: 0 },
+  numberPosition: { x: 0, y: 0 },
+  textStrokeType: "none",
+  textStrokeColor: "#000000",
+  
+  // TAMBAHKAN PROPERTI WAJIB INI:
+  prodSize: "M", 
+  sleeve: "short"
 };
-
-function uid() {
-  return Math.random().toString(36).slice(2, 9);
-}
+function uid() { return Math.random().toString(36).slice(2, 9); }
 
 const STATE_KEYS = Object.keys(initialJersey) as (keyof JerseyState)[];
 
+// Ambil HANYA field data (tanpa fungsi setter) lalu deep-clone.
+// Aman untuk disimpan ke IndexedDB & dikirim ke AI (JSON.stringify).
 export function extractJerseyState(store: JerseyStore): JerseyState {
   const src = store as unknown as Record<string, unknown>;
-  const out = {} as Record<string, unknown>;
+  const out: Record<string, unknown> = {};
   for (const k of STATE_KEYS) out[k] = src[k];
-  return out as unknown as JerseyState;
+  return JSON.parse(JSON.stringify(out)) as JerseyState;
 }
 
-/**
- * Migrate older saved-jersey shape (had primaryColor/secondaryColor/accentColor)
- * to the new zones-based shape. Idempotent — passes through new-format states.
- */
-export function migrateJerseyState(
-  s: Partial<JerseyState> & Record<string, unknown>,
-): JerseyState {
-  const out: JerseyState = { ...initialJersey, ...(s as Partial<JerseyState>) };
-  if (!s.zones) {
-    const primary = (s.primaryColor as string) || DEFAULT_ZONES.body.color;
-    const secondary = (s.secondaryColor as string) || DEFAULT_ZONES.sleeves.color;
-    const accent = (s.accentColor as string) || DEFAULT_ZONES.frontPanel.color;
-    out.zones = {
-      body: { color: primary, visible: true },
-      sleeves: { color: secondary, visible: true },
-      collar: { color: secondary, visible: true },
-      frontPanel: { color: accent, visible: true },
-      backPanel: { color: accent, visible: true },
-      stitches: { color: "#0b1f57", visible: true },
-    };
-  }
-  if (!s.sponsorMode) out.sponsorMode = "text";
-  if (!s.font) out.font = "Inter";
-  return out;
+export function migrateJerseyState(s: unknown): JerseyState {
+  return { ...initialJersey, ...(s as Partial<JerseyState>) };
 }
 
 export const useJerseyStore = create<JerseyStore>((set) => ({
   ...initialJersey,
-  setZoneColor: (id, color) =>
-    set((st) => ({
-      zones: { ...st.zones, [id]: { ...st.zones[id], color } },
-    })),
-  setZoneVisible: (id, visible) =>
-    set((st) => ({
-      zones: { ...st.zones, [id]: { ...st.zones[id], visible } },
-    })),
+  setZoneColor: (id, color) => set((st) => ({ zones: { ...st.zones, [id]: { ...st.zones[id], color } } })),
+  setZoneVisible: (id, visible) => set((st) => ({ zones: { ...st.zones, [id]: { ...st.zones[id], visible } } })),
   setPatternType: (patternType) => set({ patternType }),
   setPatternColor: (patternColor) => set({ patternColor }),
   setPatternScale: (patternScale) => set({ patternScale }),
   setPatternOpacity: (patternOpacity) => set({ patternOpacity }),
-  setPatternDataUrl: (patternDataUrl) =>
-    set((s) => ({
-      patternDataUrl,
-      patternType: patternDataUrl ? "custom" : s.patternType,
-    })),
+  setPatternDataUrl: (url) => set((s) => ({ patternDataUrl: url, patternType: url ? "custom" : s.patternType })),
   setPatternTinted: (patternTinted) => set({ patternTinted }),
   setPlayerName: (playerName) => set({ playerName }),
   setPlayerNumber: (playerNumber) => set({ playerNumber }),
   setSponsorMode: (sponsorMode) => set({ sponsorMode }),
   setSponsorText: (sponsorText) => set({ sponsorText }),
-  setSponsorImage: (sponsorImageDataUrl) =>
-    set({ sponsorImageDataUrl, sponsorMode: sponsorImageDataUrl ? "image" : "text" }),
-  setFont: (font) => set({ font }),
-  addCustomText: () =>
-    set((s) => ({
-      customTexts:
-        s.customTexts.length >= 4
-          ? s.customTexts
-          : [
-              ...s.customTexts,
-              {
-                id: uid(),
-                value: "",
-                color: s.zones.frontPanel.color,
-                placement: "frontTop",
-              },
-            ],
-    })),
-  updateCustomText: (id, patch) =>
-    set((s) => ({
-      customTexts: s.customTexts.map((t) =>
-        t.id === id ? { ...t, ...patch } : t,
-      ),
-    })),
-  removeCustomText: (id) =>
-    set((s) => ({ customTexts: s.customTexts.filter((t) => t.id !== id) })),
+  setSponsorImage: (url) => set({ sponsorImageDataUrl: url, sponsorMode: url ? "image" : "text" }),
+  setSponsorScale: (sponsorScale) => set({ sponsorScale }),
+  setSponsorPosition: (sponsorPosition) => set({ sponsorPosition }),
+  setSponsorColor: (sponsorColor) => set({ sponsorColor }),
+  setFont: (font) => {
+    if (!font.startsWith("custom-")) { set({ font, customFontUrl: null }); return; }
+    set({ font });
+  },
+  setCustomFont: (url) => set({ customFontUrl: url }),
+  addCustomText: () => set((s) => ({ customTexts: s.customTexts.length >= 4 ? s.customTexts : [...s.customTexts, { id: uid(), value: "", color: s.zones.frontPanel.color, placement: "frontTop" }] })),
+  updateCustomText: (id, patch) => set((s) => ({ customTexts: s.customTexts.map((t) => t.id === id ? { ...t, ...patch } : t) })),
+  removeCustomText: (id) => set((s) => ({ customTexts: s.customTexts.filter((t) => t.id !== id) })),
   setLogo: (logoDataUrl) => set({ logoDataUrl }),
+  setLogoScale: (logoScale) => set({ logoScale }),
+  setLogoPosition: (logoPosition) => set({ logoPosition }),
+  setApparel: (apparelDataUrl) => set({ apparelDataUrl }),
+  setApparelScale: (apparelScale) => set({ apparelScale }),
+  setApparelPosition: (apparelPosition) => set({ apparelPosition }),
+  setApparelColor: (apparelColor) => set({ apparelColor }),
   setSize: (size) => set({ size }),
   setUseFace: (useFace) => set({ useFace }),
   setUserPhoto: (userPhotoDataUrl) => set({ userPhotoDataUrl }),
-  loadState: (s) =>
-    set({
-      ...migrateJerseyState(
-        (s ?? {}) as Partial<JerseyState> & Record<string, unknown>,
-      ),
-    }),
+  setNamePosition: (namePosition) => set({ namePosition }),
+  setNumberPosition: (numberPosition) => set({ numberPosition }),
+  setTextStrokeType: (textStrokeType) => set({ textStrokeType }),
+  setTextStrokeColor: (textStrokeColor) => set({ textStrokeColor }),
+  loadState: (s) => set({ ...migrateJerseyState(s) }),
   reset: () => set({ ...initialJersey }),
 }));

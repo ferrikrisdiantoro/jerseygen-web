@@ -2,6 +2,34 @@
 
 import { fontFamily, type JerseyState, type ZoneId } from "@/types/jersey";
 
+// 1. Definisikan ekstensi properti agar TypeScript di psd.ts mengenalinya
+interface ExtendedLogoState {
+  logoScale?: number;
+  logoPosition?: { x: number; y: number };
+  
+  // Ekstensi untuk Apparel
+  apparelDataUrl?: string | null;
+  apparelScale?: number;
+  apparelPosition?: { x: number; y: number };
+  apparelColor?: string;
+
+  // Ekstensi Baru untuk Sponsor Utama (Murni Gambar)
+  sponsorScale?: number;
+  sponsorPosition?: { x: number; y: number };
+  sponsorColor?: string;
+
+  // Posisi Koordinat Nama & Nomor
+  namePosition?: { x: number; y: number };   
+  numberPosition?: { x: number; y: number }; 
+
+  // ================= EDIT BARU: EKSTENSI STATE STROKE CODES =================
+  textStrokeType?: "none" | "thin" | "medium" | "thick";
+  textStrokeColor?: string;
+}
+
+// 2. Gabungkan tipe data JerseyState dengan properti logo baru
+type EnhancedJerseyState = JerseyState & ExtendedLogoState;
+
 export interface PsdLayer {
   type: "pixel" | "group";
   file?: string;
@@ -26,8 +54,6 @@ interface LayerConfig {
   blend?: GlobalCompositeOperation;
 }
 
-// Render order matches PSD bottom-to-top. Each layer is tinted with its zone
-// color (multiply), or composited with a blend mode if it's an effect overlay.
 const FRONT_LAYERS: LayerConfig[] = [
   { key: "front_design__front_base", zone: "body" },
   { key: "front_design__right_hand__r_hand_", zone: "sleeves" },
@@ -63,12 +89,9 @@ const BACK_LAYERS: LayerConfig[] = [
   { key: "back_design__effect__effect_", zone: null, blend: "screen" },
 ];
 
-// Body base bbox in PSD coords — used to position text/logos/sponsor.
 const FRONT_BBOX = { left: 367, top: 268, width: 1142, height: 1451 };
 const BACK_BBOX = { left: 1524, top: 253, width: 1182, height: 1463 };
 
-// Viewport — region of the full PSD canvas to crop & display for each side
-// (so the jersey fills the preview, not a tiny corner of the full 3000x2000).
 const FRONT_VIEWPORT = { left: 150, top: 220, width: 1530, height: 1540 };
 const BACK_VIEWPORT = { left: 1330, top: 200, width: 1600, height: 1560 };
 
@@ -98,13 +121,6 @@ function loadImage(file: string): Promise<HTMLImageElement> {
   });
 }
 
-/**
- * Tint a layer with a zone color, using only the layer's ALPHA channel as a
- * shape mask. This avoids weird color mixing when the source PSD layer has
- * colored (not grayscale) pixel content — picks ONLY the shape, fills with
- * chosen color. Realistic shading comes from the linear-burn / linear-dodge
- * Effect layers composited on top.
- */
 function tintLayer(
   img: HTMLImageElement,
   color: string,
@@ -115,22 +131,16 @@ function tintLayer(
   c.width = width;
   c.height = height;
   const ctx = c.getContext("2d")!;
-  // 1. fill with target color
   ctx.fillStyle = color;
   ctx.fillRect(0, 0, width, height);
-  // 2. mask to layer's alpha shape
   ctx.globalCompositeOperation = "destination-in";
   ctx.drawImage(img, 0, 0, width, height);
   return c;
 }
 
-/**
- * Draw the pattern (stripes / hoops / etc.) onto the main canvas, masked to the
- * body layer's shape, so it only appears on the jersey body.
- */
 function drawBodyPattern(
   ctx: CanvasRenderingContext2D,
-  state: JerseyState,
+  state: EnhancedJerseyState,
   bodyImg: HTMLImageElement,
   patternImg: HTMLImageElement | null,
   x: number,
@@ -164,7 +174,7 @@ function drawBodyPattern(
     pctx.beginPath();
     pctx.moveTo(-W * 0.1, H);
     pctx.lineTo(W * 1.1, -H * 0.1);
-    pctx.stroke();
+    pctx.stroke(); // Diubah ke pctx agar sesuai konteks local canvas pattern
   } else if (state.patternType === "chevron") {
     const step = H / 8 / s;
     pctx.lineWidth = H / 36 / s;
@@ -173,7 +183,7 @@ function drawBodyPattern(
       pctx.moveTo(0, py);
       pctx.lineTo(W / 2, py + step / 2);
       pctx.lineTo(W, py);
-      pctx.stroke();
+      pctx.stroke(); // Diubah ke pctx agar sesuai konteks local canvas pattern
     }
   } else if (state.patternType === "grid") {
     const g = W / 9 / s;
@@ -182,29 +192,23 @@ function drawBodyPattern(
       pctx.beginPath();
       pctx.moveTo(px, 0);
       pctx.lineTo(px, H);
-      pctx.stroke();
+      pctx.stroke(); // Diubah ke pctx
     }
     for (let py = 0; py < H; py += g) {
       pctx.beginPath();
       pctx.moveTo(0, py);
       pctx.lineTo(W, py);
-      pctx.stroke();
+      pctx.stroke(); // Diubah ke pctx
     }
   } else if (state.patternType === "custom" && patternImg) {
-    const size = Math.max(40, W / 5 / s);
-    const tile = document.createElement("canvas");
-    tile.width = size;
-    tile.height = size;
-    tile.getContext("2d")!.drawImage(patternImg, 0, 0, size, size);
-    const fill = pctx.createPattern(tile, "repeat");
-    if (fill) {
-      pctx.fillStyle = fill;
-      pctx.fillRect(0, 0, W, H);
-    }
+    pctx.save();
+    pctx.translate(W / 2, H / 2);
+    pctx.scale(s, s);
+    pctx.drawImage(patternImg, -W / 2, -H / 2, W, H);
+    pctx.restore();
   }
 
   pctx.globalAlpha = 1;
-  // mask the pattern to the body shape
   pctx.globalCompositeOperation = "destination-in";
   pctx.drawImage(bodyImg, 0, 0, W, H);
 
@@ -221,6 +225,7 @@ async function loadUserImage(dataUrl: string): Promise<HTMLImageElement> {
   });
 }
 
+// ================= EDIT BARU: MODIFIKASI PARAMETER DAN LOGIKA STROKE CANVAS =================
 function drawText(
   ctx: CanvasRenderingContext2D,
   text: string,
@@ -228,17 +233,30 @@ function drawText(
   y: number,
   fontPx: number,
   color: string,
-  outline: string,
+  outlineColor: string,
   family: string,
+  strokeWidth: number = 0,
 ) {
   ctx.save();
-  ctx.font = `900 ${fontPx}px ${family}`;
+  
+  const weight = family.startsWith("custom-") ? "bold" : "900"; // Paksa bold
+  ctx.font = `${weight} ${fontPx}px "${family}"`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.lineJoin = "round";
-  ctx.lineWidth = Math.max(2, fontPx * 0.07);
-  ctx.strokeStyle = outline;
-  ctx.strokeText(text, x, y);
+  ctx.miterLimit = 2; // Penting agar stroke sudut tajam tidak melebar aneh
+
+  // Jika ada stroke, gambar stroke terlebih dahulu
+  if (strokeWidth > 0) {
+    ctx.lineWidth = strokeWidth * 2; // Kita kali 2 agar lebih tebal terlihat
+    ctx.strokeStyle = outlineColor;
+    ctx.strokeText(text, x, y);
+    
+    // Tambahan: Tambahkan stroke kedua agar terlihat solid dan tidak tipis
+    ctx.strokeText(text, x, y); 
+  }
+  
+  // Isi teks utama di atas stroke
   ctx.fillStyle = color;
   ctx.fillText(text, x, y);
   ctx.restore();
@@ -259,20 +277,20 @@ function shade(hex: string, percent: number): string {
 async function ensureFont(family: string) {
   if (typeof document === "undefined" || !document.fonts) return;
   try {
-    await document.fonts.load(`900 48px ${family}`);
-  } catch {
-    // ignore
+    await Promise.all([
+      document.fonts.load(`900 48px "${family}"`),
+      document.fonts.load(`400 48px "${family}"`),
+      document.fonts.load(`16px "${family}"`)
+    ]);
+  } catch (e) {
+    console.warn("Gagal memastikan font kustom:", e);
   }
 }
 
-/**
- * Composite the layered PSD jersey onto the canvas at given scale factor.
- * scale=0.5 → render at 1500x1000 (half PSD resolution) — fast & sharp enough.
- */
 export async function compositePsdJersey(
   canvas: HTMLCanvasElement,
   side: "front" | "back",
-  state: JerseyState,
+  state: EnhancedJerseyState,
   scale = 0.5,
 ): Promise<void> {
   const manifest = await loadManifest();
@@ -286,13 +304,11 @@ export async function compositePsdJersey(
   canvas.height = H;
   const ctx = canvas.getContext("2d")!;
   ctx.clearRect(0, 0, W, H);
-  // Translate so we render only the jersey region of the full PSD.
   ctx.save();
   ctx.translate(-vp.left * scale, -vp.top * scale);
 
   const layers = side === "back" ? BACK_LAYERS : FRONT_LAYERS;
 
-  // Preload all images for this side in parallel.
   await Promise.all(
     layers.map(async (lc) => {
       const entry = manifest.layers[lc.key];
@@ -300,7 +316,6 @@ export async function compositePsdJersey(
     }),
   );
 
-  // Preload custom pattern image if needed.
   let patternImg: HTMLImageElement | null = null;
   if (state.patternType === "custom" && state.patternDataUrl) {
     try {
@@ -327,7 +342,6 @@ export async function compositePsdJersey(
       const tinted = tintLayer(img, zone.color, w, h);
       ctx.globalCompositeOperation = "source-over";
       ctx.drawImage(tinted, x, y);
-      // overlay pattern on the body, masked to its shape
       if (lc.zone === "body") {
         drawBodyPattern(ctx, state, img, patternImg, x, y, w, h);
       }
@@ -338,7 +352,6 @@ export async function compositePsdJersey(
   }
   ctx.globalCompositeOperation = "source-over";
 
-  // Text & graphic overlays (sponsor, number, name, logo, custom texts)
   await drawOverlays(ctx, side, state, scale, family);
   ctx.restore();
 }
@@ -346,7 +359,7 @@ export async function compositePsdJersey(
 async function drawOverlays(
   ctx: CanvasRenderingContext2D,
   side: "front" | "back",
-  state: JerseyState,
+  state: EnhancedJerseyState,
   scale: number,
   family: string,
 ) {
@@ -360,56 +373,122 @@ async function drawOverlays(
   const accent = state.zones.frontPanel.color;
 
   if (side === "front") {
-    // Logo — dada kiri pemakai (sisi kanan layar)
+    // ================= FITUR 1: LOGO KLUB (DADA KIRI) =================
     if (state.logoDataUrl) {
       try {
         const logo = await loadUserImage(state.logoDataUrl);
-        const lw = W * 0.18;
-        ctx.drawImage(logo, cx + W * 0.18, top + H * 0.12, lw, lw);
+        const baseWidth = W * 0.18;
+        const aspectRatio = logo.height / logo.width;
+        const baseHeight = baseWidth * aspectRatio;
+        
+        const defaultCenterX = cx - W * 0.22;
+        const defaultCenterY = top + H * 0.22;
+
+        const finalWidth = baseWidth * (state.logoScale ?? 1);
+        const finalHeight = baseHeight * (state.logoScale ?? 1);
+
+        const offsetX = (state.logoPosition?.x ?? 0) * scale;
+        const offsetY = (state.logoPosition?.y ?? 0) * scale;
+
+        const drawX = defaultCenterX - (finalWidth / 2) + offsetX;
+        const drawY = defaultCenterY - (finalHeight / 2) + offsetY;
+
+        ctx.save();
+        ctx.drawImage(logo, drawX, drawY, finalWidth, finalHeight);
+        ctx.restore();
       } catch {
         // ignore
       }
     }
 
-    // Sponsor: image OR text
-    if (state.sponsorMode === "image" && state.sponsorImageDataUrl) {
+    // ================= FITUR 2: LOGO APPAREL (DADA KANAN) =================
+    if (state.apparelDataUrl) {
       try {
-        const sponsor = await loadUserImage(state.sponsorImageDataUrl);
-        const sw = W * 0.55;
-        const sh = sw * 0.28;
-        ctx.drawImage(sponsor, cx - sw / 2, top + H * 0.36, sw, sh);
+        const apparelImg = await loadUserImage(state.apparelDataUrl);
+        const baseApparelWidth = W * 0.16;
+        const apparelAspect = apparelImg.height / apparelImg.width;
+        const baseApparelHeight = baseApparelWidth * apparelAspect;
+
+        const defaultApparelCenterX = cx + W * 0.22;
+        const defaultApparelCenterY = top + H * 0.22;
+
+        const finalApparelWidth = baseApparelWidth * (state.apparelScale ?? 1);
+        const finalApparelHeight = baseApparelHeight * (state.apparelScale ?? 1);
+
+        const apparelOffsetX = (state.apparelPosition?.x ?? 0) * scale;
+        const apparelOffsetY = (state.apparelPosition?.y ?? 0) * scale;
+
+        const apparelDrawX = defaultApparelCenterX - (finalApparelWidth / 2) + apparelOffsetX;
+        const apparelDrawY = defaultApparelCenterY - (finalApparelHeight / 2) + apparelOffsetY;
+
+        const offscreen = document.createElement("canvas");
+        offscreen.width = Math.max(1, finalApparelWidth);
+        offscreen.height = Math.max(1, finalApparelHeight);
+        const offCtx = offscreen.getContext("2d");
+
+        if (offCtx) {
+          ctx.save();
+          offCtx.drawImage(apparelImg, 0, 0, finalApparelWidth, finalApparelHeight);
+          offCtx.globalCompositeOperation = "source-in";
+          offCtx.fillStyle = state.apparelColor || "#ffffff";
+          offCtx.fillRect(0, 0, finalApparelWidth, finalApparelHeight);
+          ctx.drawImage(offscreen, apparelDrawX, apparelDrawY);
+          ctx.restore();
+        }
       } catch {
         // ignore
       }
-    } else if (state.sponsorMode === "text" && state.sponsorText.trim()) {
-      const bandH = H * 0.075;
-      const bandW = W * 0.6;
-      ctx.save();
-      ctx.globalAlpha = 0.92;
-      ctx.fillStyle = accent;
-      ctx.fillRect(cx - bandW / 2, top + H * 0.36, bandW, bandH);
-      ctx.restore();
-      drawText(
-        ctx,
-        state.sponsorText.trim().toUpperCase().slice(0, 14),
-        cx,
-        top + H * 0.4,
-        H * 0.05,
-        outline,
-        accent,
-        family,
-      );
+    }
+
+    // ================= FITUR 3: SPONSOR UTAMA GAMBAR =================
+    if (state.sponsorImageDataUrl) {
+      try {
+        const sponsorImg = await loadUserImage(state.sponsorImageDataUrl);
+        
+        const baseSponsorWidth = W * 0.55;
+        const sponsorAspect = sponsorImg.height / sponsorImg.width;
+        const baseSponsorHeight = baseSponsorWidth * sponsorAspect;
+
+        const defaultSponsorCenterX = cx;
+        const defaultSponsorCenterY = top + H * 0.42; 
+
+        const finalSponsorWidth = baseSponsorWidth * (state.sponsorScale ?? 1);
+        const finalSponsorHeight = baseSponsorHeight * (state.sponsorScale ?? 1);
+
+        const sponsorOffsetX = (state.sponsorPosition?.x ?? 0) * scale;
+        const sponsorOffsetY = (state.sponsorPosition?.y ?? 0) * scale;
+
+        const sponsorDrawX = defaultSponsorCenterX - (finalSponsorWidth / 2) + sponsorOffsetX;
+        const sponsorDrawY = defaultSponsorCenterY - (finalSponsorHeight / 2) + sponsorOffsetY;
+
+        const offscreenSponsor = document.createElement("canvas");
+        offscreenSponsor.width = Math.max(1, finalSponsorWidth);
+        offscreenSponsor.height = Math.max(1, finalSponsorHeight);
+        const offSponsorCtx = offscreenSponsor.getContext("2d");
+
+        if (offSponsorCtx) {
+          ctx.save();
+          offSponsorCtx.drawImage(sponsorImg, 0, 0, finalSponsorWidth, finalSponsorHeight);
+          
+          if (state.sponsorColor) {
+            offSponsorCtx.globalCompositeOperation = "source-in";
+            offSponsorCtx.fillStyle = state.sponsorColor;
+            offSponsorCtx.fillRect(0, 0, finalSponsorWidth, finalSponsorHeight);
+          }
+          
+          ctx.drawImage(offscreenSponsor, sponsorDrawX, sponsorDrawY);
+          ctx.restore();
+        }
+      } catch {
+        // ignore
+      }
     }
 
     // Front custom texts
     state.customTexts
-      .filter(
-        (t) =>
-          t.value && (t.placement === "frontTop" || t.placement === "frontBottom"),
-      )
+      .filter((t) => t.value && (t.placement === "frontTop" || t.placement === "frontBottom"))
       .forEach((t) => {
-        const y =
-          t.placement === "frontTop" ? top + H * 0.18 : top + H * 0.85;
+        const y = t.placement === "frontTop" ? top + H * 0.18 : top + H * 0.85;
         drawText(
           ctx,
           t.value.toUpperCase().slice(0, 16),
@@ -419,45 +498,85 @@ async function drawOverlays(
           t.color,
           outline,
           family,
+          0,
         );
       });
   } else {
-    // BACK
-    // Big back number
+    // ================= BAGIAN BELAKANG (BACK) =================
+    
+    // ================= EDIT BARU: HITUNG TEBAL STROKE DARI STATE =================
+    let calculatedStrokeWidth = 0;
+    let targetStrokeColor = outline; // Default fallback outline warna kerah gelap
+
+    if (state.textStrokeType && state.textStrokeType !== "none") {
+      // Menentukan ketebalan stroke proporsional mengikuti tinggi bounding box jersey (H)
+      let factor = 0;
+      if (state.textStrokeType === "thin") factor = 0.012;     // Tipis
+      if (state.textStrokeType === "medium") factor = 0.028;   // Sedang
+      if (state.textStrokeType === "thick") factor = 0.048;    // Tebal
+      
+      calculatedStrokeWidth = H * factor;
+      if (state.textStrokeColor) {
+        targetStrokeColor = state.textStrokeColor;
+      }
+    } else if (state.textStrokeType === "none") {
+      // Jika dipilih "Tanpa Stroke", set ukuran ketebalan ke 0 penuh
+      calculatedStrokeWidth = 0;
+    }
+
+    // 1. DYNAMIC POSITIONING & STROKE: NOMOR PUNGGUNG
     if (state.playerNumber.trim()) {
+      const defaultNumberX = cx;
+      const defaultNumberY = top + H * 0.55;
+
+      const numberOffsetX = (state.numberPosition?.x ?? 0) * scale;
+      const numberOffsetY = (state.numberPosition?.y ?? 0) * scale;
+
+      const finalNumberX = defaultNumberX + numberOffsetX;
+      const finalNumberY = defaultNumberY + numberOffsetY;
+
       drawText(
         ctx,
         state.playerNumber.trim().slice(0, 2),
-        cx,
-        top + H * 0.55,
+        finalNumberX,
+        finalNumberY,
         H * 0.3,
         accent,
-        outline,
+        targetStrokeColor,
         family,
+        calculatedStrokeWidth, // <-- Oper variabel tebal stroke kustom
       );
     }
-    // Player name (upper back)
+
+    // 2. DYNAMIC POSITIONING & STROKE: NAMA PUNGGUNG
     if (state.playerName.trim()) {
+      const defaultNameX = cx;
+      const defaultNameY = top + H * 0.22;
+
+      const nameOffsetX = (state.namePosition?.x ?? 0) * scale;
+      const nameOffsetY = (state.namePosition?.y ?? 0) * scale;
+
+      const finalNameX = defaultNameX + nameOffsetX;
+      const finalNameY = defaultNameY + nameOffsetY;
+
       drawText(
         ctx,
         state.playerName.trim().toUpperCase().slice(0, 12),
-        cx,
-        top + H * 0.22,
+        finalNameX,
+        finalNameY,
         H * 0.075,
         accent,
-        outline,
+        targetStrokeColor,
         family,
+        calculatedStrokeWidth, // <-- Oper variabel tebal stroke kustom
       );
     }
+
     // Back custom texts
     state.customTexts
-      .filter(
-        (t) =>
-          t.value && (t.placement === "backTop" || t.placement === "backBottom"),
-      )
+      .filter((t) => t.value && (t.placement === "backTop" || t.placement === "backBottom"))
       .forEach((t) => {
-        const y =
-          t.placement === "backTop" ? top + H * 0.32 : top + H * 0.88;
+        const y = t.placement === "backTop" ? top + H * 0.32 : top + H * 0.88;
         drawText(
           ctx,
           t.value.toUpperCase().slice(0, 16),
@@ -467,81 +586,18 @@ async function drawOverlays(
           t.color,
           outline,
           family,
+          0,
         );
       });
   }
 }
 
-/** Light-weight wrapper for tests/export — same API as the old flat texture. */
 export async function renderJerseyToCanvas(
   side: "front" | "back",
-  state: JerseyState,
+  state: EnhancedJerseyState,
   scale = 0.5,
 ): Promise<HTMLCanvasElement> {
   const c = document.createElement("canvas");
   await compositePsdJersey(c, side, state, scale);
   return c;
-}
-
-/**
- * Render the FRONT side at high resolution as a PNG data URL, on a WHITE
- * background. Used as the realistic reference image for AI generate — gives
- * the AI a photo-quality jersey to put on the person, instead of the old
- * flat 2D illustration.
- */
-export async function exportPsdFrontPng(
-  state: JerseyState,
-  scale = 0.5,
-): Promise<string> {
-  const layer = await renderJerseyToCanvas("front", state, scale);
-  // composite onto white background for cleaner AI input
-  const c = document.createElement("canvas");
-  c.width = layer.width;
-  c.height = layer.height;
-  const ctx = c.getContext("2d")!;
-  ctx.fillStyle = "#ffffff";
-  ctx.fillRect(0, 0, c.width, c.height);
-  ctx.drawImage(layer, 0, 0);
-  // JPEG keeps file size manageable for AI providers (PNG of this can hit ~3MB).
-  return c.toDataURL("image/jpeg", 0.88);
-}
-
-/** Two-panel design sheet (front + back) for download / print. */
-export async function exportPsdDesignSheet(
-  state: JerseyState,
-): Promise<string> {
-  const front = await renderJerseyToCanvas("front", state, 0.6);
-  const back = await renderJerseyToCanvas("back", state, 0.6);
-
-  const pad = 40;
-  const sheet = document.createElement("canvas");
-  sheet.width = front.width + back.width + pad * 3;
-  sheet.height = Math.max(front.height, back.height) + pad * 2 + 60;
-  const ctx = sheet.getContext("2d")!;
-  ctx.fillStyle = "#ffffff";
-  ctx.fillRect(0, 0, sheet.width, sheet.height);
-  ctx.drawImage(front, pad, pad + 60);
-  ctx.drawImage(back, pad * 2 + front.width, pad + 60);
-
-  ctx.fillStyle = "#0f172a";
-  ctx.font = "700 34px Arial, sans-serif";
-  ctx.fillText("JerseyGen — Design Sheet", pad, 52);
-  ctx.font = "500 26px Arial, sans-serif";
-  ctx.fillStyle = "#64748b";
-  ctx.fillText("DEPAN", pad, pad + 48);
-  ctx.fillText("BELAKANG", pad * 2 + front.width, pad + 48);
-  return sheet.toDataURL("image/png");
-}
-
-/** Small JPEG thumbnail for saved-jersey list. */
-export async function exportPsdThumbnail(state: JerseyState): Promise<string> {
-  const layer = await renderJerseyToCanvas("front", state, 0.25);
-  const thumb = document.createElement("canvas");
-  thumb.width = 200;
-  thumb.height = Math.round((200 * layer.height) / layer.width);
-  const ctx = thumb.getContext("2d")!;
-  ctx.fillStyle = "#ffffff";
-  ctx.fillRect(0, 0, thumb.width, thumb.height);
-  ctx.drawImage(layer, 0, 0, thumb.width, thumb.height);
-  return thumb.toDataURL("image/jpeg", 0.7);
 }

@@ -50,10 +50,11 @@ export const freepikProvider: AIProvider = {
     };
 
     // nano-banana memakai field "image_urls", seedream memakai "reference_images".
+    // aspect_ratio 9:16 (portrait) sesuai permintaan klien.
     const isNanoBanana = model.includes("nano-banana");
     const body = isNanoBanana
-      ? { prompt, image_urls: refs }
-      : { prompt, reference_images: refs };
+      ? { prompt, image_urls: refs, aspect_ratio: "portrait_9_16" }
+      : { prompt, reference_images: refs, aspect_ratio: "portrait_9_16" };
 
     const createRes = await fetch(endpoint, {
       method: "POST",

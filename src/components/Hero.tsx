@@ -1,3 +1,5 @@
+// src/components/Hero.tsx
+import Link from "next/link"; // Pastikan ada import ini di paling atas
 import { ArrowDown, Sparkles } from "lucide-react";
 
 export function Hero() {
@@ -16,25 +18,29 @@ export function Hero() {
           </span>
 
           <h1 className="mt-5 max-w-3xl font-display text-4xl font-extrabold uppercase leading-[0.98] tracking-tight text-balance sm:text-6xl">
-            Desain Jersey.{" "}
-            <span className="relative inline-block text-accent">
-              Generate
-              <svg
-                className="absolute -bottom-1 left-0 w-full"
-                viewBox="0 0 200 12"
-                fill="none"
-                preserveAspectRatio="none"
-              >
-                <path
-                  d="M2 9C40 3 160 3 198 9"
-                  stroke="#ff5b04"
-                  strokeWidth="4"
-                  strokeLinecap="round"
-                />
-              </svg>
-            </span>{" "}
-            Pemakainya.
-          </h1>
+  JERSEY{" "}
+  <span className="relative inline-block text-accent">
+    Gen
+    <svg
+      className="absolute -bottom-1 left-0 w-full"
+      viewBox="0 0 200 12"
+      fill="none"
+      preserveAspectRatio="none"
+    >
+      <path
+        d="M2 9C40 3 160 3 198 9"
+        stroke="#ff5b04"
+        strokeWidth="4"
+        strokeLinecap="round"
+      />
+    </svg>
+  </span>{" "}
+  
+  {/* Menggunakan text-base untuk ukuran lebih kecil, tracking-widest untuk spasi */}
+  <span className="block text-base tracking-[0.6em] mt-3">
+    SNICA INDONESIA
+  </span>
+</h1>
 
           <p className="mt-5 max-w-xl text-sm text-ink-mute sm:text-base">
             Rancang jersey futsal/bola dalam 3D — pattern, warna, nama, nomor,
@@ -44,18 +50,13 @@ export function Hero() {
 
           <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
             <a
-              href="#designer"
+              href="/designer"
               className="group flex items-center gap-2 rounded-xl bg-accent px-6 py-3.5 text-sm font-bold text-white shadow-card transition hover:bg-accent-dark"
             >
               Mulai Desain
               <ArrowDown className="h-4 w-4 transition group-hover:translate-y-0.5" />
             </a>
-            <a
-              href="#how"
-              className="rounded-xl border border-line bg-surface px-6 py-3.5 text-sm font-bold text-ink transition hover:border-line-strong"
-            >
-              Lihat Cara Pakai
-            </a>
+            
           </div>
 
           <div className="mt-9 flex flex-wrap items-center justify-center gap-x-8 gap-y-2 text-xs font-medium text-ink-soft">

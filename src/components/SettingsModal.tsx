@@ -24,13 +24,6 @@ const FREEPIK_MODELS = [
   "nano-banana",
 ];
 
-const KIEAI_MODELS = [
-  "google/nano-banana-edit",
-  "google/nano-banana-pro",
-  "google/nano-banana",
-  "google/nano-banana-2",
-];
-
 export function SettingsModal({ onClose }: { onClose: () => void }) {
   const [provider, setProvider] = useState<AppSettings["provider"]>("");
   const [apiKey, setApiKey] = useState("");
@@ -149,19 +142,6 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
                   >
                     <option value="">Default ({MODEL_HINTS.freepik})</option>
                     {FREEPIK_MODELS.map((m) => (
-                      <option key={m} value={m}>
-                        {m}
-                      </option>
-                    ))}
-                  </select>
-                ) : provider === "kieai" ? (
-                  <select
-                    value={model}
-                    onChange={(e) => setModel(e.target.value)}
-                    className="jg-input"
-                  >
-                    <option value="">Default ({MODEL_HINTS.kieai})</option>
-                    {KIEAI_MODELS.map((m) => (
                       <option key={m} value={m}>
                         {m}
                       </option>

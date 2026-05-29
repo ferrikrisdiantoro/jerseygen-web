@@ -60,6 +60,7 @@ export const kieaiProvider: AIProvider = {
         prompt,
         image_urls: refs,
         output_format: "png",
+        image_size: "9:16",
       },
     });
 

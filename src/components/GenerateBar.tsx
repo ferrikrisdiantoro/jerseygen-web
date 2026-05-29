@@ -3,7 +3,7 @@
 import { Loader2, Sparkles, Wand2 } from "lucide-react";
 import { useState } from "react";
 import { extractJerseyState, useJerseyStore } from "@/lib/store";
-import { exportPsdFrontPng } from "@/lib/psd";
+import { exportFrontPng } from "@/lib/jerseyTexture";
 import { getSettings } from "@/lib/settings";
 import { useUiStore } from "@/lib/ui";
 import { ResultModal } from "./ResultModal";
@@ -16,31 +16,30 @@ interface KeyError {
 }
 
 /**
- * Downsample a data-URL image so we don't send 5-10 MB photos to the AI provider
- * (KieAI throws server-500 on huge payloads). Re-encodes as JPEG.
+ * Downsample a data-URL image + re-encode as JPEG so the POST payload to the
+ * AI provider stays small (KieAI throws server-500 on multi-MB payloads).
  */
 async function downsampleDataUrl(
   dataUrl: string,
   maxWidth = 1024,
   quality = 0.88,
 ): Promise<string> {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     const img = new Image();
     img.onload = () => {
-      if (img.width <= maxWidth) {
-        resolve(dataUrl);
-        return;
-      }
-      const ratio = maxWidth / img.width;
+      const w = img.width <= maxWidth ? img.width : maxWidth;
+      const ratio = w / img.width;
       const c = document.createElement("canvas");
-      c.width = maxWidth;
+      c.width = w;
       c.height = Math.round(img.height * ratio);
       const ctx = c.getContext("2d");
-      if (!ctx) return reject(new Error("Canvas tidak tersedia"));
+      if (!ctx) return resolve(dataUrl);
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, c.width, c.height);
       ctx.drawImage(img, 0, 0, c.width, c.height);
       resolve(c.toDataURL("image/jpeg", quality));
     };
-    img.onerror = () => reject(new Error("Gagal membaca foto"));
+    img.onerror = () => resolve(dataUrl);
     img.src = dataUrl;
   });
 }
@@ -64,17 +63,23 @@ export function GenerateBar() {
     try {
       setBusy(true);
       const jersey = extractJerseyState(store);
-      const previewDataUrl = await exportPsdFrontPng(jersey);
-      // shrink the face photo so total POST payload stays under a few MB
-      const jerseyForApi = jersey.userPhotoDataUrl
-        ? {
-            ...jersey,
-            userPhotoDataUrl: await downsampleDataUrl(
-              jersey.userPhotoDataUrl,
-              1024,
-            ),
-          }
-        : jersey;
+      const rawPreview = await exportFrontPng(jersey);
+      // keep payload small so the AI provider doesn't 500 on big uploads
+      const previewDataUrl = await downsampleDataUrl(rawPreview, 900);
+      // Strip heavy image dataURLs the AI doesn't render (logo/apparel/pattern/
+      // sponsor/font) — keep a placeholder so prompt presence-checks still work.
+      // Only the face photo + composited preview are actually needed.
+      const jerseyForApi = {
+        ...jersey,
+        userPhotoDataUrl: jersey.userPhotoDataUrl
+          ? await downsampleDataUrl(jersey.userPhotoDataUrl, 1024)
+          : null,
+        patternDataUrl: jersey.patternDataUrl ? "x" : null,
+        logoDataUrl: jersey.logoDataUrl ? "x" : null,
+        apparelDataUrl: jersey.apparelDataUrl ? "x" : null,
+        sponsorImageDataUrl: jersey.sponsorImageDataUrl ? "x" : null,
+        customFontUrl: null,
+      };
       const settings = getSettings();
       const res = await fetch("/api/generate", {
         method: "POST",

@@ -1,10 +1,10 @@
 "use client";
 
-import { Download, FileImage, Loader2, Printer } from "lucide-react";
 import { useState } from "react";
+import { Panel } from "@/components/ui/Panel";
+import { FileImage, Loader2, Download, Printer } from "lucide-react";
 import { extractJerseyState, useJerseyStore } from "@/lib/store";
-import { exportPsdDesignSheet as buildDesignSheet } from "@/lib/psd";
-import { Panel } from "./ui/Panel";
+import { buildDesignSheet, handlePrintPattern } from "@/lib/jerseyTexture";
 
 export function ExportBar() {
   const store = useJerseyStore();
@@ -13,39 +13,30 @@ export function ExportBar() {
   async function handleDownload() {
     try {
       setBusy("download");
-      const url = await buildDesignSheet(extractJerseyState(store));
+      const state = extractJerseyState(store);
+      const url = await buildDesignSheet(state as any);
       const a = document.createElement("a");
       a.href = url;
       a.download = `jersey-design-${Date.now()}.png`;
       a.click();
-    } catch {
+    } catch (err) {
+      console.error("Download Error:", err);
       alert("Gagal membuat file desain.");
     } finally {
       setBusy(null);
     }
   }
 
-  async function handlePrint() {
+  async function handlePrintClick() {
+    // Pastikan ID ini cocok dengan div penampung pola di komponen utama Anda
+    const PRINT_CONTAINER_ID = "print-pattern-container";
+    
+    setBusy("print");
     try {
-      setBusy("print");
-      const url = await buildDesignSheet(extractJerseyState(store));
-      const w = window.open("", "_blank");
-      if (!w) {
-        alert("Popup diblokir. Izinkan popup untuk mencetak.");
-        return;
-      }
-      w.document.write(`
-        <html>
-          <head><title>Print Jersey Design</title></head>
-          <body style="margin:0;display:flex;align-items:center;justify-content:center;">
-            <img src="${url}" style="max-width:100%;height:auto;"
-                 onload="window.focus();window.print();" />
-          </body>
-        </html>
-      `);
-      w.document.close();
-    } catch {
-      alert("Gagal menyiapkan cetakan.");
+      await handlePrintPattern(PRINT_CONTAINER_ID);
+    } catch (err) {
+      console.error("Print Error:", err);
+      alert("Gagal mencetak pola. Pastikan container pola tersedia.");
     } finally {
       setBusy(null);
     }
@@ -55,33 +46,22 @@ export function ExportBar() {
     <Panel
       icon={<FileImage className="h-[18px] w-[18px]" />}
       title="Ekspor Desain"
-      desc="Unduh atau cetak lembar desain (tampak depan & belakang)."
+      desc="Unduh desain untuk preview atau cetak pola untuk produksi."
     >
       <div className="grid grid-cols-2 gap-2">
+        
         <button
-          onClick={handleDownload}
-          disabled={busy !== null}
-          className="flex items-center justify-center gap-2 rounded-xl border border-line bg-surface px-4 py-2.5 text-sm font-bold text-ink transition hover:border-line-strong hover:bg-paper disabled:opacity-60"
-        >
-          {busy === "download" ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Download className="h-4 w-4" />
-          )}
-          Download PNG
-        </button>
-        <button
-          onClick={handlePrint}
-          disabled={busy !== null}
-          className="flex items-center justify-center gap-2 rounded-xl border border-line bg-surface px-4 py-2.5 text-sm font-bold text-ink transition hover:border-line-strong hover:bg-paper disabled:opacity-60"
-        >
-          {busy === "print" ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Printer className="h-4 w-4" />
-          )}
-          Print Design
-        </button>
+  onClick={handlePrintClick}
+  disabled={busy !== null}
+  className="flex items-center justify-center gap-2 rounded-xl border border-line bg-surface px-4 py-2.5 text-sm font-bold text-ink transition hover:border-line-strong hover:bg-paper disabled:opacity-60"
+>
+  {busy === "print" ? (
+    <Loader2 className="h-4 w-4 animate-spin" />
+  ) : (
+    <Download className="h-4 w-4" /> // Ikon Printer diganti menjadi Download
+  )}
+  Download Pattern
+</button>
       </div>
     </Panel>
   );

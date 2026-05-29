@@ -2,37 +2,37 @@
 
 import { useEffect, useRef, useState } from "react";
 import { compositePsdJersey } from "@/lib/psd";
-import type { JerseyState } from "@/types/jersey";
+import { fontFamily, type JerseyState } from "@/types/jersey";
 
-function stateKey(s: JerseyState, showBack: boolean): string {
-  const z = s.zones;
-  return [
-    showBack ? "B" : "F",
-    z.body.color, z.body.visible,
-    z.sleeves.color, z.sleeves.visible,
-    z.collar.color, z.collar.visible,
-    z.frontPanel.color, z.frontPanel.visible,
-    z.backPanel.color, z.backPanel.visible,
-    z.stitches.color, z.stitches.visible,
-    // pattern
-    s.patternType, s.patternColor, s.patternScale, s.patternOpacity,
-    s.patternTinted,
-    s.patternDataUrl ? "p" + s.patternDataUrl.length : "0",
-    // text & graphics
-    s.playerName, s.playerNumber,
-    s.sponsorMode, s.sponsorText,
-    s.sponsorImageDataUrl ? "s" + s.sponsorImageDataUrl.length : "0",
-    s.logoDataUrl ? "l" + s.logoDataUrl.length : "0",
-    s.font,
-    s.customTexts.map((t) => `${t.value}|${t.color}|${t.placement}`).join(","),
-  ].join("~");
+export type EnhancedJerseyState = JerseyState & {
+  logoScale?: number;
+  logoPosition?: { x: number; y: number };
+  logoDataUrl?: string | null;
+  apparelDataUrl?: string | null;
+  apparelScale?: number;
+  apparelPosition?: { x: number; y: number };
+  apparelColor?: string;
+  sponsorScale?: number;
+  sponsorPosition?: { x: number; y: number };
+  sponsorColor?: string;
+  sponsorImageDataUrl?: string | null;
+  customFontUrl?: string | null;
+  namePosition?: { x: number; y: number };
+  numberPosition?: { x: number; y: number };
+  textStrokeType?: "none" | "thin" | "medium" | "thick";
+  textStrokeColor?: string;
+};
+
+// Fungsi stateKey tetap sama untuk mendeteksi perubahan
+function stateKey(s: EnhancedJerseyState, showBack: boolean): string {
+  return [showBack ? "B" : "F", s.zones.body?.color, s.patternType, s.playerName, s.playerNumber].join("~");
 }
 
 export default function JerseyViewPSD({
   state,
   showBack,
 }: {
-  state: JerseyState;
+  state: EnhancedJerseyState;
   showBack: boolean;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -44,37 +44,64 @@ export default function JerseyViewPSD({
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+
     let cancelled = false;
-    (async () => {
+
+    const render = async () => {
+      setLoading(true);
       try {
         setError(null);
-        await compositePsdJersey(canvas, showBack ? "back" : "front", state, 0.5);
+        
+        // 1. Dapatkan nama font CSS yang valid
+        const fontName = fontFamily(state.font);
+        
+        // 2. Load font secara eksplisit ke document.fonts
+        // Jika font bawaan, dia akan mencoba load. 
+        // Jika kustom (custom-xxx), dia akan terlewati (tidak error)
+        if (document.fonts && !fontName.startsWith("custom-")) {
+            try {
+                await document.fonts.load(`bold 20px "${state.font}"`);
+            } catch (err) {
+                console.warn("Font mungkin belum siap atau tidak ditemukan:", fontName);
+            }
+        }
+
+        const ctx = canvas.getContext("2d", { willReadFrequently: true });
+        if (!ctx) return;
+
+        // 3. Render jersey
+        await compositePsdJersey(canvas, showBack ? "back" : "front", state as any, 0.5);
+        
         if (!cancelled) setLoading(false);
       } catch (e) {
         if (cancelled) return;
         setError(e instanceof Error ? e.message : "Gagal render");
         setLoading(false);
       }
-    })();
+    };
+
+    render();
+
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key]);
+  }, [key, state, showBack]); // Menggunakan key agar trigger lebih presisi
 
   return (
     <div className="relative flex h-full w-full items-center justify-center p-2">
-      <canvas
-        ref={canvasRef}
+      <canvas 
+        ref={canvasRef} 
         className="block h-auto w-auto max-h-full max-w-full"
+        // Atribut ini memastikan html2canvas tidak melewatkan elemen ini
+        style={{ imageRendering: 'pixelated' }} 
       />
       {loading && (
-        <div className="absolute inset-0 grid place-items-center text-xs font-medium text-ink-soft">
-          Memuat jersey…
+        <div className="absolute inset-0 grid place-items-center text-xs font-medium text-ink-soft bg-white/50 backdrop-blur-[1px]">
+          Memuat…
         </div>
       )}
       {error && (
-        <div className="absolute inset-0 grid place-items-center text-xs text-rose-600">
+        <div className="absolute inset-0 grid place-items-center text-xs text-rose-600 bg-white/80">
           {error}
         </div>
       )}

@@ -83,3 +83,8 @@ input[type="color"]::-webkit-color-swatch {
 input[type="range"] {
   accent-color: #ff5b04;
 }
+/* Paksa font agar tersedia secara global */
+.font-anton { font-family: 'Anton', sans-serif !important; }
+.font-bebas { font-family: 'Bebas Neue', sans-serif !important; }
+.font-oswald { font-family: 'Oswald', sans-serif !important; }
+.font-roboto { font-family: 'Roboto Mono', monospace !important; }

@@ -1,41 +1,47 @@
 "use client";
 
+import { get, set, keys, del } from 'idb-keyval';
 import type { JerseyState, SavedJersey } from "@/types/jersey";
 
-const KEY = "jerseygen_saved_v1";
+// Kita gunakan prefix untuk mengelola daftar ID yang tersimpan
+const LIST_KEY = "jerseygen_ids";
 
-export function listSavedJerseys(): SavedJersey[] {
-  if (typeof window === "undefined") return [];
+export async function listSavedJerseys(): Promise<SavedJersey[]> {
   try {
-    const raw = localStorage.getItem(KEY);
-    if (!raw) return [];
-    const arr = JSON.parse(raw) as SavedJersey[];
-    return Array.isArray(arr) ? arr.sort((a, b) => b.createdAt - a.createdAt) : [];
+    const ids = await get<string[]>(LIST_KEY) || [];
+    const results = await Promise.all(ids.map(id => get<SavedJersey>(id)));
+    // Filter jika ada data yang null, lalu urutkan
+    return results
+      .filter((j): j is SavedJersey => !!j)
+      .sort((a, b) => b.createdAt - a.createdAt);
   } catch {
     return [];
   }
 }
 
-export function saveJersey(
+export async function saveJersey(
   ownerName: string,
   state: JerseyState,
   thumbnail: string,
-): SavedJersey {
-  const item: SavedJersey = {
-    id: Math.random().toString(36).slice(2, 10),
-    ownerName: ownerName.trim() || "Tanpa Nama",
-    createdAt: Date.now(),
-    thumbnail,
-    state,
-  };
-  const all = listSavedJerseys();
-  all.unshift(item);
-  // keep latest 20 to stay within localStorage limits
-  localStorage.setItem(KEY, JSON.stringify(all.slice(0, 20)));
+): Promise<SavedJersey> {
+  const id = Math.random().toString(36).slice(2, 10);
+  const item: SavedJersey = { id, ownerName, createdAt: Date.now(), thumbnail, state };
+  
+  // 1. Simpan item jersey ke kunci uniknya sendiri
+  await set(id, item);
+  
+  // 2. Perbarui daftar ID saja (bukan seluruh objek)
+  const ids = await get<string[]>(LIST_KEY) || [];
+  await set(LIST_KEY, [id, ...ids]);
+  
   return item;
 }
 
-export function deleteSavedJersey(id: string) {
-  const all = listSavedJerseys().filter((j) => j.id !== id);
-  localStorage.setItem(KEY, JSON.stringify(all));
+export async function deleteSavedJersey(id: string) {
+  // 1. Hapus data jersey-nya
+  await del(id);
+  
+  // 2. Hapus ID dari daftar indeks
+  const ids = await get<string[]>(LIST_KEY) || [];
+  await set(LIST_KEY, ids.filter(i => i !== id));
 }
