@@ -13,6 +13,8 @@ import type { AIProvider, GenerateInput, ProviderOptions } from "./types";
 //      resultJson = STRING berisi JSON { resultUrls: [...] }
 
 const BASE_URL = "https://api.kie.ai";
+// File-upload service is on a different host than the jobs API.
+const UPLOAD_URL = "https://kieai.redpandaai.co/api/file-base64-upload";
 const POLL_INTERVAL_MS = 3000;
 const MAX_POLL_MS = 180_000;
 
@@ -44,7 +46,7 @@ async function uploadBase64(
   dataUrl: string,
   index: number,
 ): Promise<string> {
-  const res = await fetch(`${BASE_URL}/api/file-base64-upload`, {
+  const res = await fetch(UPLOAD_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
