@@ -92,13 +92,26 @@ export function TextTab() {
       className="jg-input w-full p-2 border border-line rounded-lg"
     >
       <option value="">-- Pilih Font --</option>
-      
-      {/* Jika ada font di uploadFonts, tampilkan di sini */}
-      {uploadedFonts && uploadedFonts.map((f) => (
-        <option key={f.id} value={f.id}>
-          {f.name}
-        </option>
-      ))}
+
+      {/* Font bawaan */}
+      <optgroup label="Font Bawaan">
+        {FONT_OPTIONS.map((f) => (
+          <option key={f.value} value={f.value} style={{ fontFamily: f.family }}>
+            {f.label}
+          </option>
+        ))}
+      </optgroup>
+
+      {/* Font hasil upload user */}
+      {uploadedFonts && uploadedFonts.length > 0 && (
+        <optgroup label="Font Upload">
+          {uploadedFonts.map((f) => (
+            <option key={f.id} value={f.id}>
+              {f.name}
+            </option>
+          ))}
+        </optgroup>
+      )}
     </select>
 
     <input

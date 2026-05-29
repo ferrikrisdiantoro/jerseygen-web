@@ -44,23 +44,31 @@ export function buildJerseyPrompt(jersey: JerseyState): string {
       ? `a solid ${body} body`
       : `a ${body} body with a ${PATTERN_LABELS[jersey.patternType].toLowerCase()} pattern in ${colorName(jersey.patternColor)}`;
 
-  const details: string[] = [];
+  // The generated photo is FRONT-facing, so only describe FRONT graphics.
+  // Name & number live on the back and must NOT appear on the front.
+  const frontDetails: string[] = [];
   if (jersey.sponsorMode === "text" && jersey.sponsorText.trim())
-    details.push(`the sponsor text "${jersey.sponsorText.trim()}" across the chest`);
-  if (jersey.sponsorMode === "image" && jersey.sponsorImageDataUrl)
-    details.push(`a sponsor logo image across the chest (as shown in the reference)`);
-  if (jersey.playerNumber.trim())
-    details.push(`the number "${jersey.playerNumber.trim()}" printed large on the BACK only (not on front)`);
-  if (jersey.playerName.trim())
-    details.push(`the name "${jersey.playerName.trim()}" on the upper back`);
-  if (jersey.logoDataUrl) details.push(`a small custom logo on the wearer's LEFT chest`);
+    frontDetails.push(`the sponsor text "${jersey.sponsorText.trim()}" across the chest`);
+  if (jersey.sponsorImageDataUrl)
+    frontDetails.push(`a sponsor logo on the chest (exactly as shown in the reference image)`);
+  if (jersey.logoDataUrl)
+    frontDetails.push(`a small team logo on the wearer's left chest (exactly as in the reference)`);
+  if (jersey.apparelDataUrl)
+    frontDetails.push(`a small apparel brand logo on the wearer's right chest`);
   jersey.customTexts
-    .filter((t) => t.value.trim())
-    .forEach((t) => details.push(`the text "${t.value.trim()}"`));
+    .filter((t) => t.value.trim() && (t.placement === "frontTop" || t.placement === "frontBottom"))
+    .forEach((t) => frontDetails.push(`the text "${t.value.trim()}" on the front`));
 
-  const detailSentence = details.length
-    ? `The jersey contains ONLY these graphics: ${details.join(", ")} — and nothing else.`
-    : `The jersey is completely plain: NO sponsor text, NO number, NO player name, NO logo, NO crest, NO badges, NO graphics whatsoever.`;
+  const detailSentence = frontDetails.length
+    ? `The FRONT of the jersey shows ONLY: ${frontDetails.join(", ")} — copy these exactly from the reference and add nothing else.`
+    : `The front of the jersey is clean: NO sponsor, NO logo, NO number, NO name, NO crest, NO graphics on the front.`;
+
+  // Number/name are on the BACK — explicitly tell the AI they are NOT visible
+  // in this front-facing shot, so it won't wrongly print them on the chest.
+  const backNote =
+    jersey.playerName.trim() || jersey.playerNumber.trim()
+      ? `The player name/number are printed on the BACK of the jersey and are therefore NOT visible in this front-facing photo — do NOT draw any number or name on the front/chest.`
+      : `Do NOT add any number or name anywhere on the jersey.`;
 
   const fit =
     jersey.size === "oversize"
@@ -78,6 +86,7 @@ export function buildJerseyPrompt(jersey: JerseyState): string {
     `The output MUST be a natural photograph of a person — NOT an illustration, NOT a flat template, NOT a mockup, NOT a clip-art jersey on a blank background.`,
     `Recreate the jersey faithfully as a real worn jersey: ${patternDesc}, ${sleeves} sleeves, and ${accent} trim and cuff stripes.`,
     detailSentence,
+    backNote,
     `STRICT RULE: Do NOT invent, add, or change anything on the jersey. Do NOT add any real-world brand or competition marks — no Nike, Adidas, Puma, Emirates, Fly Emirates, Premier League, La Liga, club crests, or any sponsor/logo that is not in the reference. Match the reference jersey 1:1.`,
     subject,
     `Jersey fit: ${fit}. Pose: standing, relaxed three-quarter body shot, calm and confident expression, sleeves may be naturally rolled.`,

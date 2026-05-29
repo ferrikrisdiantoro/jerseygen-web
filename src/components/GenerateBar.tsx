@@ -3,7 +3,7 @@
 import { Loader2, Sparkles, Wand2 } from "lucide-react";
 import { useState } from "react";
 import { extractJerseyState, useJerseyStore } from "@/lib/store";
-import { exportFrontPng } from "@/lib/jerseyTexture";
+import { renderJerseyToCanvas } from "@/lib/psd";
 import { getSettings } from "@/lib/settings";
 import { useUiStore } from "@/lib/ui";
 import { ResultModal } from "./ResultModal";
@@ -63,7 +63,11 @@ export function GenerateBar() {
     try {
       setBusy(true);
       const jersey = extractJerseyState(store);
-      const rawPreview = await exportFrontPng(jersey);
+      // Use the photorealistic PSD composite as the AI reference so the jersey
+      // the AI sees actually has the logo + sponsor + colors + pattern baked in.
+      // (front view → name/number live on the back, so they won't appear here)
+      const refCanvas = await renderJerseyToCanvas("front", jersey, 0.7);
+      const rawPreview = refCanvas.toDataURL("image/jpeg", 0.9);
       // keep payload small so the AI provider doesn't 500 on big uploads
       const previewDataUrl = await downsampleDataUrl(rawPreview, 900);
       // Strip heavy image dataURLs the AI doesn't render (logo/apparel/pattern/
