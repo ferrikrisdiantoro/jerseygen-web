@@ -3,12 +3,14 @@ import type { AIProvider, GenerateInput, ProviderOptions } from "./types";
 // KIE.AI — image edit with reference image(s).
 // Docs: https://docs.kie.ai/market/google/nano-banana-edit
 //
-// Async pattern:
-//   1) POST /api/v1/jobs/createTask  → { code, msg, data: { taskId } }
+// PENTING: createTask butuh image_urls berupa URL ASLI (bukan base64 data URI).
+// Mengirim base64 langsung -> server 500. Jadi alurnya:
+//   0) Upload tiap base64 ke /api/file-base64-upload  -> dapat downloadUrl
+//   1) POST /api/v1/jobs/createTask  -> { code, msg, data: { taskId } }
 //   2) Poll GET /api/v1/jobs/recordInfo?taskId=...
-//        → { code, data: { state, resultJson, failMsg } }
+//        -> { code, data: { state, resultJson, failMsg } }
 //      state: "waiting" | "queuing" | "generating" | "success" | "fail"
-//      resultJson is a STRING containing JSON { resultUrls: [...] }
+//      resultJson = STRING berisi JSON { resultUrls: [...] }
 
 const BASE_URL = "https://api.kie.ai";
 const POLL_INTERVAL_MS = 3000;
@@ -27,12 +29,44 @@ interface CreateTaskData {
 }
 
 interface RecordInfoData {
-  taskId?: string;
   state?: string;
   resultJson?: string;
-  failCode?: number;
   failMsg?: string;
-  progress?: number;
+}
+
+interface UploadData {
+  downloadUrl?: string;
+}
+
+/** Upload a base64 / data-URL image to KieAI storage, return a hosted URL. */
+async function uploadBase64(
+  apiKey: string,
+  dataUrl: string,
+  index: number,
+): Promise<string> {
+  const res = await fetch(`${BASE_URL}/api/file-base64-upload`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      base64Data: dataUrl,
+      uploadPath: "jerseygen/refs",
+      fileName: `ref-${Date.now()}-${index}.png`,
+    }),
+  });
+  if (!res.ok) {
+    throw new Error(`Upload gambar ke KieAI gagal: HTTP ${res.status} ${await res.text()}`);
+  }
+  const json = (await res.json()) as KieEnvelope<UploadData>;
+  const url = json.data?.downloadUrl;
+  if (json.code !== 200 || !url) {
+    throw new Error(
+      `Upload gambar ke KieAI gagal (code ${json.code}): ${json.msg || "no url"}`,
+    );
+  }
+  return url;
 }
 
 export const kieaiProvider: AIProvider = {
@@ -45,24 +79,44 @@ export const kieaiProvider: AIProvider = {
     if (!apiKey) throw new Error("API key KieAI belum diisi");
     const model = opts.model || process.env.KIEAI_MODEL || "google/nano-banana-edit";
 
-    const refs = [jerseyImageDataUrl];
-    if (userPhotoDataUrl) refs.push(userPhotoDataUrl);
-
     const headers = {
       "Content-Type": "application/json",
       Authorization: `Bearer ${apiKey}`,
     };
 
-    // ---- 1. create task (with one retry on 5xx — KieAI server hiccups) ----
-    const requestBody = JSON.stringify({
-      model,
-      input: {
-        prompt,
-        image_urls: refs,
-        output_format: "png",
-        image_size: "9:16",
-      },
-    });
+    // ---- 0. upload reference images -> real URLs ----
+    const sources = [jerseyImageDataUrl];
+    if (userPhotoDataUrl) sources.push(userPhotoDataUrl);
+
+    let refUrls: string[];
+    try {
+      refUrls = await Promise.all(
+        sources.map((src, i) =>
+          // if it's already a public URL, pass through; else upload
+          /^https?:\/\//i.test(src) ? Promise.resolve(src) : uploadBase64(apiKey, src, i),
+        ),
+      );
+    } catch (e) {
+      throw new Error(
+        e instanceof Error ? e.message : "Gagal upload gambar referensi ke KieAI",
+      );
+    }
+
+    // ---- 1. create task ----
+    // nano-banana-pro pakai field "image_input", model lain pakai "image_urls".
+    const isPro = model.includes("nano-banana-pro");
+    const input: Record<string, unknown> = {
+      prompt,
+      output_format: "png",
+      aspect_ratio: "9:16",
+    };
+    if (isPro) {
+      input.image_input = refUrls;
+      input.resolution = "2K";
+    } else {
+      input.image_urls = refUrls;
+    }
+    const requestBody = JSON.stringify({ model, input });
 
     let createJson: KieEnvelope<CreateTaskData> | null = null;
     let lastError = "";
@@ -83,10 +137,8 @@ export const kieaiProvider: AIProvider = {
       }
 
       createJson = (await createRes.json()) as KieEnvelope<CreateTaskData>;
-
       if (createJson.code === 200) break;
 
-      // KieAI envelope error (code 4xx/5xx in body)
       if (createJson.code >= 500 && attempt === 1) {
         lastError = `code ${createJson.code}: ${createJson.msg}`;
         await sleep(2000);
@@ -96,9 +148,9 @@ export const kieaiProvider: AIProvider = {
 
       const hint =
         createJson.code === 422 && /model/i.test(createJson.msg || "")
-          ? " (cek model di Setelan → coba 'google/nano-banana-2')"
+          ? " (model tidak didukung — cek nama model di Setelan)"
           : createJson.code >= 500
-            ? " (server KieAI sibuk — coba lagi beberapa detik, atau ganti provider ke Freepik)"
+            ? " (server KieAI sibuk — coba lagi, atau ganti provider ke Freepik)"
             : "";
       throw new Error(
         `KieAI menolak request (code ${createJson.code}): ${createJson.msg || "no message"}${hint}`,
@@ -129,7 +181,6 @@ export const kieaiProvider: AIProvider = {
       const state = (pollJson.data.state || "").toLowerCase();
 
       if (state === "success") {
-        // resultJson is a JSON STRING — parse it
         let resultUrls: string[] = [];
         if (pollJson.data.resultJson) {
           try {
@@ -138,7 +189,7 @@ export const kieaiProvider: AIProvider = {
             };
             resultUrls = rj.resultUrls || [];
           } catch {
-            // fall through
+            // ignore parse error
           }
         }
         const url = resultUrls[0];
@@ -151,7 +202,7 @@ export const kieaiProvider: AIProvider = {
           `KieAI generate gagal: ${pollJson.data.failMsg || "unknown error"}`,
         );
       }
-      // else: keep polling ("waiting" / "queuing" / "generating")
+      // else keep polling
     }
     throw new Error("Timeout menunggu hasil KieAI (>3 menit)");
   },
