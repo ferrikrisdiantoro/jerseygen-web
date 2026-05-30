@@ -36,56 +36,67 @@ export default function JerseyViewPSD({
   showBack: boolean;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const renderIdRef = useRef(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const key = stateKey(state, showBack);
+  // Deep-track semua field (logo, sponsor, posisi, dll) supaya render presisi.
+  const deepKey = JSON.stringify(state);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    let cancelled = false;
+    // Setiap render dapat ID unik. Hanya render TERBARU yang boleh menyalin
+    // hasil ke canvas terlihat — mencegah dua render async menggambar
+    // tumpang tindih (bug "logo/baju jadi dua" / kedip).
+    const myId = ++renderIdRef.current;
 
     const render = async () => {
       setLoading(true);
       try {
         setError(null);
-        
-        // 1. Dapatkan nama font CSS yang valid
+
         const fontName = fontFamily(state.font);
-        
-        // 2. Load font secara eksplisit ke document.fonts
-        // Jika font bawaan, dia akan mencoba load. 
-        // Jika kustom (custom-xxx), dia akan terlewati (tidak error)
         if (document.fonts && !fontName.startsWith("custom-")) {
-            try {
-                await document.fonts.load(`bold 20px "${state.font}"`);
-            } catch (err) {
-                console.warn("Font mungkin belum siap atau tidak ditemukan:", fontName);
-            }
+          try {
+            await document.fonts.load(`bold 20px "${state.font}"`);
+          } catch {
+            // font belum siap — pakai fallback
+          }
         }
 
-        const ctx = canvas.getContext("2d", { willReadFrequently: true });
-        if (!ctx) return;
+        // Render ke canvas OFFSCREEN dulu (bukan ke canvas terlihat).
+        const offscreen = document.createElement("canvas");
+        await compositePsdJersey(
+          offscreen,
+          showBack ? "back" : "front",
+          state as any,
+          0.5,
+        );
 
-        // 3. Render jersey
-        await compositePsdJersey(canvas, showBack ? "back" : "front", state as any, 0.5);
-        
-        if (!cancelled) setLoading(false);
+        // Kalau sudah ada render lain yang lebih baru, buang hasil ini.
+        if (myId !== renderIdRef.current) return;
+
+        // Salin atomik ke canvas terlihat (clear penuh dulu -> no ghosting).
+        canvas.width = offscreen.width;
+        canvas.height = offscreen.height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(offscreen, 0, 0);
+
+        setLoading(false);
       } catch (e) {
-        if (cancelled) return;
+        if (myId !== renderIdRef.current) return;
         setError(e instanceof Error ? e.message : "Gagal render");
         setLoading(false);
       }
     };
 
     render();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [key, state, showBack]); // Menggunakan key agar trigger lebih presisi
+  }, [key, deepKey, showBack]);
 
   return (
     <div className="relative flex h-full w-full items-center justify-center p-2">
